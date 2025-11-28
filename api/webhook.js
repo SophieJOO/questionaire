@@ -113,10 +113,25 @@ function parseTallyData(tallyData) {
       data.age = value;
     } else if (label.includes('직업') || label.includes('직종') || label.includes('하시는 일')) {
       data.occupation = value;
-    } else if ((label.includes('키') || label.includes('신장')) && !label.includes('트림')) {
+    } else if (label.includes('학년')) {
+      data.grade = value;
+      data.occupation = value + ' 학생'; // 직업 필드에도 학생으로 표시
+    }
+    // 청소년용: 부모 키 (성장 예측용)
+    else if (label.includes('아버지') && label.includes('키')) {
+      data.fatherHeight = value;
+    } else if (label.includes('어머니') && label.includes('키')) {
+      data.motherHeight = value;
+    }
+    // 청소년용: 본인 키/체중
+    else if ((label.includes('키') || label.includes('신장')) && !label.includes('트림') && !label.includes('아버지') && !label.includes('어머니')) {
       data.height = value;
     } else if (label.includes('체중') || label.includes('몸무게')) {
       data.weight = value;
+    }
+    // 청소년용: 성장 진료
+    else if (label.includes('성장') && (label.includes('관심') || label.includes('진료'))) {
+      data.growthInterest = value;
     }
     else if (label.includes('1순위') || label.includes('치료받고 싶은 증상')) {
       data.mainSymptom1 = value;
@@ -305,6 +320,51 @@ function parseTallyData(tallyData) {
       data.conditionFactor = value;
     } else if (label.includes('기타') || label.includes('특이') || label.includes('알아주') || label.includes('자유롭게')) {
       data.otherSymptoms = value;
+    }
+    // ===== 청소년 특화 항목 =====
+    // 집중력/학업
+    else if (label.includes('집중') || label.includes('주의력')) {
+      data.concentration = value;
+    } else if (label.includes('학업') || label.includes('공부') || label.includes('성적')) {
+      data.academicPerformance = value;
+    } else if (label.includes('산만') || label.includes('ADHD') || label.includes('과잉')) {
+      data.hyperactivity = value;
+    }
+    // 야뇨증 (소아청소년)
+    else if (label.includes('야뇨') || (label.includes('밤') && label.includes('오줌')) || label.includes('이불')) {
+      data.bedwetting = value;
+    }
+    // 성장 관련 상세
+    else if (label.includes('성장판') || label.includes('골연령')) {
+      data.growthPlate = value;
+    } else if (label.includes('성조숙') || label.includes('조숙증')) {
+      data.precociousPuberty = value;
+    } else if (label.includes('2차') && label.includes('성징')) {
+      data.secondarySexCharacteristics = value;
+    }
+    // 초경 (여학생)
+    else if (label.includes('초경') || (label.includes('처음') && label.includes('생리'))) {
+      data.menarche = value;
+    }
+    // 비염/아토피/알레르기 (소아청소년 흔한 질환)
+    else if (label.includes('비염') || label.includes('코막힘') || label.includes('콧물')) {
+      data.rhinitis = value;
+    } else if (label.includes('아토피') || label.includes('피부염')) {
+      data.atopy = value;
+    } else if (label.includes('알레르기') || label.includes('알러지')) {
+      data.allergy = value;
+    } else if (label.includes('천식') || label.includes('기관지')) {
+      data.asthma = value;
+    }
+    // 게임/스마트폰 (청소년 생활습관)
+    else if (label.includes('게임') || label.includes('스마트폰') || label.includes('핸드폰') || label.includes('미디어')) {
+      data.screenTime = value;
+    }
+    // 운동/신체활동
+    else if (label.includes('운동') && (label.includes('빈도') || label.includes('자주') || label.includes('하루'))) {
+      data.exerciseFrequency = value;
+    } else if (label.includes('운동') && label.includes('종류')) {
+      data.exerciseType = value;
     }
   });
 
@@ -530,6 +590,27 @@ ${data.medicalHistory || '없음'}
 - 생리 주기: ${data.menstrualCycle || '미입력'}
 - 생리량: ${data.menstrualAmount || '미입력'}
 - 생리통: ${data.menstrualPain || '미입력'}
+- 초경 시기: ${data.menarche || '미입력'}
+
+### 소아청소년 특화 정보 (해당시)
+- 학년: ${data.grade || '미입력'}
+- 아버지 키: ${data.fatherHeight || '미입력'}cm
+- 어머니 키: ${data.motherHeight || '미입력'}cm
+- 성장 진료 관심: ${data.growthInterest || '미입력'}
+- 성장판/골연령: ${data.growthPlate || '미입력'}
+- 성조숙증 여부: ${data.precociousPuberty || '미입력'}
+- 2차 성징: ${data.secondarySexCharacteristics || '미입력'}
+- 집중력: ${data.concentration || '미입력'}
+- 학업/성적: ${data.academicPerformance || '미입력'}
+- 과잉행동/산만함: ${data.hyperactivity || '미입력'}
+- 야뇨증: ${data.bedwetting || '미입력'}
+- 비염: ${data.rhinitis || '미입력'}
+- 아토피: ${data.atopy || '미입력'}
+- 알레르기: ${data.allergy || '미입력'}
+- 천식: ${data.asthma || '미입력'}
+- 게임/스마트폰 사용: ${data.screenTime || '미입력'}
+- 운동 빈도: ${data.exerciseFrequency || '미입력'}
+- 운동 종류: ${data.exerciseType || '미입력'}
 
 ### 컨디션 패턴 및 특이사항 (변증 참고용 - 중요)
 - 몸 상태 나빠질 때 패턴: ${data.worseningPattern || '미입력'}
@@ -551,6 +632,7 @@ ${data.medicalHistory || '없음'}
 9. **식이 요법**: 권장 음식과 피해야 할 음식
 10. **주의사항**: 치료 및 생활 시 특별히 주의할 점
 11. **예후**: 예상 치료 기간 및 경과, 호전 가능성
+12. **소아청소년 성장 분석** (해당시): 부모 키 기반 예상 최종 키, 현재 성장 상태 평가, 성장 촉진을 위한 한의학적 접근법
 
 반드시 아래 JSON 형식으로만 응답해주세요:
 {
@@ -602,6 +684,13 @@ ${data.medicalHistory || '없음'}
     "duration": "예상 치료 기간",
     "outlook": "예후 전망",
     "factors": "호전/악화에 영향을 미치는 요인"
+  },
+  "growthAnalysis": {
+    "predictedHeight": "부모 키 기반 예상 최종 키 (MPH±5cm)",
+    "currentStatus": "현재 성장 상태 평가",
+    "growthPotential": "남은 성장 가능성",
+    "recommendations": "성장 촉진을 위한 한의학적 권고 (침구, 한약, 생활습관)",
+    "precociousPubertyRisk": "성조숙증 위험도 평가 (해당시)"
   }
 }`;
 }
@@ -648,11 +737,15 @@ function formatChart(patientData, analysis) {
   let patternStr = pattern.primary || '-';
   if (pattern.secondary) patternStr += ' / ' + pattern.secondary;
 
+  // 청소년용 추가 정보
+  const isTeen = data.grade || data.fatherHeight || data.motherHeight || data.growthInterest;
+  const teenInfo = isTeen ? formatTeenInfo(data, analysis) : '';
+
   const chart = `${data.name || '___'}/${gender}/${data.age || '__'}세/${data.occupation || '___'}
 ${height || '___'}cm/${weight || '___'}kg BMI ${bmi}
 BP ___/___ mmHg  PR ___회/분
 추정체질: ${constitution.type || '-'} / 변증: ${patternStr}
-
+${teenInfo}
 [주소]
 #1. ${extractSymptomName(data.mainSymptom1)}
 o/s) ${extractOnset(data.mainSymptom1)}
@@ -686,11 +779,96 @@ f/h) 추후 확인
 [부종] ${formatEdema(data)}
 [한열] ${formatColdHeat(data)}
 [정서] ${formatMental(data)}
-[복진]
+${isTeen ? formatTeenSymptoms(data) : ''}[복진]
 [첨언] ${formatAdditionalNotes(data, analysis)}
 [처방]`;
 
   return chart;
+}
+
+// ===== 청소년 특화 포맷 함수 =====
+
+function formatTeenInfo(data, analysis) {
+  const parts = [];
+
+  // 부모 키 정보
+  if (data.fatherHeight || data.motherHeight) {
+    const fh = data.fatherHeight || '?';
+    const mh = data.motherHeight || '?';
+    parts.push(`부모키: 父${fh}cm/母${mh}cm`);
+  }
+
+  // 성장 예측 (AI 분석 결과)
+  const growth = analysis.growthAnalysis || {};
+  if (growth.predictedHeight) {
+    parts.push(`예상키: ${growth.predictedHeight}`);
+  }
+
+  // 성장 관심
+  if (data.growthInterest === '있다' || data.growthInterest === '예') {
+    parts.push('성장진료희망(+)');
+  }
+
+  return parts.length > 0 ? '\n' + parts.join(' / ') + '\n' : '';
+}
+
+function formatTeenSymptoms(data) {
+  let result = '';
+
+  // 비염/아토피/알레르기
+  const allergyParts = [];
+  if (data.rhinitis && data.rhinitis !== '없음' && data.rhinitis !== '해당 없음') {
+    allergyParts.push('비염(+)');
+  }
+  if (data.atopy && data.atopy !== '없음' && data.atopy !== '해당 없음') {
+    allergyParts.push('아토피(+)');
+  }
+  if (data.allergy && data.allergy !== '없음' && data.allergy !== '해당 없음') {
+    allergyParts.push('알레르기: ' + data.allergy);
+  }
+  if (data.asthma && data.asthma !== '없음' && data.asthma !== '해당 없음') {
+    allergyParts.push('천식(+)');
+  }
+  if (allergyParts.length > 0) {
+    result += `[알레르기] ${allergyParts.join(' / ')}\n`;
+  }
+
+  // 집중력/학업
+  const focusParts = [];
+  if (data.concentration) focusParts.push('집중력: ' + data.concentration);
+  if (data.hyperactivity && data.hyperactivity !== '없음' && data.hyperactivity !== '해당 없음') {
+    focusParts.push('과잉행동(+)');
+  }
+  if (focusParts.length > 0) {
+    result += `[집중력] ${focusParts.join(' / ')}\n`;
+  }
+
+  // 야뇨
+  if (data.bedwetting && data.bedwetting !== '없음' && data.bedwetting !== '해당 없음') {
+    result += `[야뇨] (+) ${data.bedwetting}\n`;
+  }
+
+  // 성장/2차성징
+  const growthParts = [];
+  if (data.growthPlate) growthParts.push('성장판: ' + data.growthPlate);
+  if (data.precociousPuberty && data.precociousPuberty !== '없음' && data.precociousPuberty !== '해당 없음') {
+    growthParts.push('성조숙증 의심');
+  }
+  if (data.secondarySexCharacteristics) growthParts.push('2차성징: ' + data.secondarySexCharacteristics);
+  if (data.menarche) growthParts.push('초경: ' + data.menarche);
+  if (growthParts.length > 0) {
+    result += `[성장] ${growthParts.join(' / ')}\n`;
+  }
+
+  // 생활습관 (청소년)
+  const lifestyleParts = [];
+  if (data.screenTime) lifestyleParts.push('미디어: ' + data.screenTime);
+  if (data.exerciseFrequency) lifestyleParts.push('운동: ' + data.exerciseFrequency);
+  if (lifestyleParts.length > 0) {
+    result += `[생활] ${lifestyleParts.join(' / ')}\n`;
+  }
+
+  return result;
 }
 
 // ===== 포맷 함수들 (기존 포맷 + 세부사항 강화) =====
@@ -1070,6 +1248,22 @@ async function sendToSlack(patientData, analysis, chartOutput) {
   if (prognosis.factors) prognosisText += `영향요인: ${prognosis.factors}`;
   prognosisText = prognosisText.trim();
 
+  // 성장 분석 문자열 (청소년용)
+  const growth = analysis.growthAnalysis || {};
+  const isTeen = patientData.grade || patientData.fatherHeight || patientData.motherHeight || patientData.growthInterest;
+  let growthText = '';
+  if (isTeen && (growth.predictedHeight || growth.currentStatus || growth.recommendations)) {
+    if (patientData.fatherHeight || patientData.motherHeight) {
+      growthText += `부모키: 父${patientData.fatherHeight || '?'}cm / 母${patientData.motherHeight || '?'}cm\n`;
+    }
+    if (growth.predictedHeight) growthText += `예상 최종키: ${growth.predictedHeight}\n`;
+    if (growth.currentStatus) growthText += `현재 상태: ${growth.currentStatus}\n`;
+    if (growth.growthPotential) growthText += `성장 가능성: ${growth.growthPotential}\n`;
+    if (growth.precociousPubertyRisk) growthText += `성조숙증 위험: ${growth.precociousPubertyRisk}\n`;
+    if (growth.recommendations) growthText += `권고: ${growth.recommendations}`;
+    growthText = growthText.trim();
+  }
+
   // 원본 응답 텍스트 생성 (최대 2900자로 제한 - Slack 블록 제한)
   const rawResponseText = formatRawResponses(patientData.rawResponses || []);
 
@@ -1229,6 +1423,27 @@ async function sendToSlack(patientData, analysis, chartOutput) {
       text: { type: "mrkdwn", text: "```" + rawResponseText + "```" }
     }
   ];
+
+  // 청소년 성장 분석 섹션 추가 (해당시)
+  if (isTeen && growthText) {
+    // 예후 섹션 다음에 성장 분석 섹션 삽입
+    const prognosisIndex = blocks.findIndex(b =>
+      b.type === 'section' && b.text && b.text.text && b.text.text.includes('📈 예후')
+    );
+    if (prognosisIndex !== -1) {
+      const growthBlocks = [
+        { type: "divider" },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*📏 성장 분석 (소아청소년)*\n${growthText}`
+          }
+        }
+      ];
+      blocks.splice(prognosisIndex + 1, 0, ...growthBlocks);
+    }
+  }
 
   const response = await fetch(webhookUrl, {
     method: 'POST',
