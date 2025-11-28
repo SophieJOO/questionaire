@@ -9,7 +9,7 @@ Tally Form (환자 설문 작성)
       ↓
 Google Sheets (자동 저장)
       ↓
-Google Apps Script (AI 분석 트리거)
+Google Apps Script (Gemini AI 분석)
       ↓
 Slack (차트 + 분석 결과 자동 전송)
 ```
@@ -52,10 +52,10 @@ src/
 1. Google Sheets 생성 → 시트 이름을 `설문응답`으로 변경
 2. Tally 설문지에서 Google Sheets 연동 설정
 3. [Slack Webhook 생성](https://api.slack.com/apps)
-4. [Anthropic API 키 발급](https://console.anthropic.com)
+4. [Google AI Studio API 키 발급](https://aistudio.google.com/apikey) (Gemini - 무료)
 5. Google Sheets → 확장 프로그램 → Apps Script
 6. `google-apps-script/` 폴더의 코드 복사
-7. CONFIG에 API 키와 Webhook URL 입력
+7. CONFIG에 Gemini API 키와 Slack Webhook URL 입력
 8. 트리거 설정 (변경 시 → onFormSubmit 실행)
 
 ## 설문지 링크
@@ -121,7 +121,7 @@ f/h) 추후 확인
 ## 기술 스택
 
 - Google Apps Script
-- Anthropic Claude API
+- Google Gemini API (무료)
 - Tally Forms
 - Slack Incoming Webhooks
 - Google Sheets

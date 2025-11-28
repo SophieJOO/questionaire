@@ -2,16 +2,17 @@
  * 아현재한의원 환자 설문 AI 분석 시스템
  * Google Apps Script 버전
  *
- * Tally Form → Google Sheets → AI 분석 → Slack 전송
+ * Tally Form → Google Sheets → Gemini AI 분석 → Slack 전송
  */
 
 // ============================================
 // 설정 (여기에 본인의 키를 입력하세요)
 // ============================================
 const CONFIG = {
-  ANTHROPIC_API_KEY: 'YOUR_ANTHROPIC_API_KEY_HERE',  // Anthropic API 키
+  GEMINI_API_KEY: 'YOUR_GEMINI_API_KEY_HERE',  // Google AI Studio API 키
   SLACK_WEBHOOK_URL: 'YOUR_SLACK_WEBHOOK_URL_HERE',  // Slack Incoming Webhook URL
   SHEET_NAME: '설문응답',  // 시트 이름 (Tally가 데이터 저장하는 시트)
+  GEMINI_MODEL: 'gemini-1.5-flash',  // 사용할 Gemini 모델 (gemini-1.5-pro, gemini-1.5-flash)
 };
 
 // ============================================
@@ -28,7 +29,7 @@ function onFormSubmit(e) {
     const patientData = parseSheetData(headers, values);
 
     // AI 분석 수행
-    const analysis = analyzeWithClaude(patientData);
+    const analysis = analyzeWithGemini(patientData);
 
     // 차트 포맷팅
     const chartOutput = formatChart(patientData, analysis);
@@ -59,7 +60,7 @@ function testAnalysis() {
   const patientData = parseSheetData(headers, values);
   Logger.log('파싱된 데이터: ' + JSON.stringify(patientData));
 
-  const analysis = analyzeWithClaude(patientData);
+  const analysis = analyzeWithGemini(patientData);
   Logger.log('분석 결과: ' + JSON.stringify(analysis));
 
   const chartOutput = formatChart(patientData, analysis);
@@ -180,18 +181,45 @@ function parseSheetData(headers, values) {
 }
 
 // ============================================
-// Claude AI 분석
+// Google Gemini AI 분석
 // ============================================
-function analyzeWithClaude(patientData) {
+function analyzeWithGemini(patientData) {
   const prompt = buildAnalysisPrompt(patientData);
 
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.GEMINI_MODEL}:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
+
   const payload = {
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 4096,
-    messages: [
+    contents: [
       {
-        role: 'user',
-        content: prompt
+        parts: [
+          {
+            text: prompt
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.7,
+      topK: 40,
+      topP: 0.95,
+      maxOutputTokens: 8192,
+    },
+    safetySettings: [
+      {
+        category: "HARM_CATEGORY_HARASSMENT",
+        threshold: "BLOCK_NONE"
+      },
+      {
+        category: "HARM_CATEGORY_HATE_SPEECH",
+        threshold: "BLOCK_NONE"
+      },
+      {
+        category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        threshold: "BLOCK_NONE"
+      },
+      {
+        category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+        threshold: "BLOCK_NONE"
       }
     ]
   };
@@ -199,22 +227,22 @@ function analyzeWithClaude(patientData) {
   const options = {
     method: 'post',
     contentType: 'application/json',
-    headers: {
-      'x-api-key': CONFIG.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   };
 
-  const response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', options);
+  const response = UrlFetchApp.fetch(url, options);
   const result = JSON.parse(response.getContentText());
 
   if (result.error) {
-    throw new Error('Claude API 오류: ' + result.error.message);
+    throw new Error('Gemini API 오류: ' + result.error.message);
   }
 
-  const analysisText = result.content[0].text;
+  if (!result.candidates || result.candidates.length === 0) {
+    throw new Error('Gemini API: 응답이 없습니다');
+  }
+
+  const analysisText = result.candidates[0].content.parts[0].text;
   return parseAnalysisResponse(analysisText);
 }
 
@@ -326,7 +354,7 @@ ${data.medicalHistory || '없음'}
 4. **예상 질환**: 한의학적 병증
 5. **형색성정**: 예상되는 형/색/성/정
 
-응답은 JSON 형식으로:
+반드시 아래 JSON 형식으로만 응답해주세요. 다른 텍스트 없이 JSON만 출력하세요:
 {
   "constitution": {
     "type": "체질명",
@@ -376,13 +404,30 @@ ${data.medicalHistory || '없음'}
 
 function parseAnalysisResponse(responseText) {
   try {
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    // JSON 블록 추출 (```json ... ``` 형식 처리)
+    let jsonText = responseText;
+
+    // ```json ... ``` 블록 제거
+    const jsonBlockMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonBlockMatch) {
+      jsonText = jsonBlockMatch[1];
+    } else {
+      // ``` ... ``` 블록 제거
+      const codeBlockMatch = responseText.match(/```\s*([\s\S]*?)\s*```/);
+      if (codeBlockMatch) {
+        jsonText = codeBlockMatch[1];
+      }
+    }
+
+    // JSON 객체 추출
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
     throw new Error('JSON 형식을 찾을 수 없습니다');
   } catch (error) {
     Logger.log('JSON 파싱 오류: ' + error.message);
+    Logger.log('원본 응답: ' + responseText);
     return {
       rawAnalysis: responseText,
       parseError: true

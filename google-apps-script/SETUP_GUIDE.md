@@ -1,6 +1,6 @@
 # 환자 설문 AI 분석 시스템 설정 가이드
 
-Tally Form → Google Sheets → AI 분석 → Slack 자동 전송
+Tally Form → Google Sheets → Gemini AI 분석 → Slack 자동 전송
 
 ---
 
@@ -50,21 +50,25 @@ https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
 
 ---
 
-## 4단계: Anthropic API 키 발급
+## 4단계: Google AI Studio API 키 발급 (Gemini)
 
 ### 4.1 API 키 생성
-1. [Anthropic Console](https://console.anthropic.com) 접속
-2. 로그인 또는 회원가입
-3. **API Keys** 메뉴
-4. **Create Key** 클릭
-5. 키 이름 입력 후 생성
-6. API 키 복사 (나중에 사용)
+1. [Google AI Studio](https://aistudio.google.com/apikey) 접속
+2. Google 계정으로 로그인
+3. **Get API Key** 또는 **API 키 만들기** 클릭
+4. 새 프로젝트 선택 또는 기존 프로젝트 선택
+5. **Create API key in new project** 클릭
+6. 생성된 API 키 복사
 
 ```
-sk-ant-api03-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+AIzaSy________________________________________________
 ```
 
-> ⚠️ API 키는 한 번만 표시됩니다. 안전하게 보관하세요.
+> 💡 Gemini API는 무료 사용량이 넉넉합니다 (분당 60회, 일 1,500회)
+
+### 4.2 사용 가능한 모델
+- `gemini-1.5-flash`: 빠르고 경제적 (권장)
+- `gemini-1.5-pro`: 더 정확하지만 느림
 
 ---
 
@@ -86,9 +90,10 @@ sk-ant-api03-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ```javascript
 const CONFIG = {
-  ANTHROPIC_API_KEY: 'sk-ant-api03-여기에_실제_키_입력',
+  GEMINI_API_KEY: 'AIzaSy_여기에_실제_키_입력',  // Google AI Studio API 키
   SLACK_WEBHOOK_URL: 'https://hooks.slack.com/services/여기에_실제_URL_입력',
   SHEET_NAME: '설문응답',
+  GEMINI_MODEL: 'gemini-1.5-flash',  // 또는 'gemini-1.5-pro'
 };
 ```
 
@@ -132,8 +137,13 @@ const CONFIG = {
 ## 문제 해결
 
 ### ❌ "API 키가 잘못되었습니다"
-- Anthropic API 키가 올바른지 확인
+- Google AI Studio에서 API 키가 활성화되어 있는지 확인
 - 키 앞뒤 공백 제거
+- `AIzaSy`로 시작하는지 확인
+
+### ❌ "Gemini API: 응답이 없습니다"
+- 프롬프트가 너무 긴 경우 발생할 수 있음
+- `GEMINI_MODEL`을 `gemini-1.5-pro`로 변경해보기
 
 ### ❌ "Slack 전송 실패"
 - Webhook URL이 올바른지 확인
@@ -183,6 +193,19 @@ const CONFIG = {
 
 ---
 
+## Gemini vs Claude 비교
+
+| 항목 | Gemini | Claude |
+|------|--------|--------|
+| 무료 사용량 | 분당 60회, 일 1,500회 | 없음 |
+| 속도 | 빠름 (flash 모델) | 보통 |
+| 한국어 | 양호 | 우수 |
+| 비용 | 무료 ~ 저렴 | 유료 |
+
+> 💡 대부분의 경우 Gemini 1.5 Flash로 충분합니다.
+
+---
+
 ## 추가 설정 (선택사항)
 
 ### 특정 시간에만 알림 받기
@@ -196,3 +219,9 @@ const CONFIG = {
 - `추정체질` 열
 - `예상질환` 열
 - `AI분석결과` 열 (JSON 형식)
+
+### 모델 변경
+더 정확한 분석이 필요하면 CONFIG에서 모델 변경:
+```javascript
+GEMINI_MODEL: 'gemini-1.5-pro',  // 더 정확하지만 느림
+```
