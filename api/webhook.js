@@ -226,20 +226,34 @@ function parseTallyData(tallyData) {
 }
 
 function extractValue(field) {
-  // 1. 직접 값이 있는 경우 (텍스트 입력, 숫자 등)
+  // 디버그: 필드 구조 로깅
+  console.log(`Field [${field.label}]:`, JSON.stringify(field).substring(0, 200));
+
+  // 1. options가 있고 value가 옵션 ID인 경우 (버튼/라디오/드롭다운)
+  if (field.options && Array.isArray(field.options) && field.options.length > 0) {
+    // value가 옵션 ID인 경우 해당 옵션의 text 반환
+    if (field.value) {
+      const selectedOption = field.options.find(opt => opt.id === field.value);
+      if (selectedOption) {
+        return selectedOption.text || selectedOption.name || String(field.value);
+      }
+    }
+    // value가 배열인 경우 (다중 선택)
+    if (Array.isArray(field.value)) {
+      const selectedTexts = field.value.map(val => {
+        const opt = field.options.find(o => o.id === val);
+        return opt ? (opt.text || opt.name) : val;
+      });
+      return selectedTexts.join(', ');
+    }
+  }
+
+  // 2. 직접 값이 있는 경우 (텍스트 입력, 숫자 등)
   if (field.value !== undefined && field.value !== null && field.value !== '') {
     if (Array.isArray(field.value)) {
       return field.value.join(', ');
     }
     return String(field.value);
-  }
-
-  // 2. 선택형 필드 (드롭다운, 라디오 버튼 등) - options 배열에서 text 추출
-  if (field.options && Array.isArray(field.options)) {
-    const selectedOptions = field.options.filter(opt => opt.id);
-    if (selectedOptions.length > 0) {
-      return selectedOptions.map(opt => opt.text || opt.name || opt.value).join(', ');
-    }
   }
 
   // 3. answer 필드가 있는 경우
