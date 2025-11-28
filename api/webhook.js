@@ -115,10 +115,16 @@ function parseTallyData(tallyData) {
       data.coldSensitivity = value;
     } else if (label.includes('부위') && label.includes('차갑')) {
       data.coldAreas = value;
+    } else if (label.includes('추위') && label.includes('관련') && label.includes('증상')) {
+      data.coldSymptoms = value;
+    } else if (label.includes('아랫배') || (label.includes('하복부') && label.includes('증상'))) {
+      data.lowerAbdomenSymptoms = value;
     } else if (label.includes('추위') && label.includes('더위') && label.includes('중')) {
       data.coldVsHeat = value;
     } else if (label.includes('더위') && label.includes('어느 정도')) {
       data.heatSensitivity = value;
+    } else if (label.includes('더위') && label.includes('관련') && label.includes('증상')) {
+      data.heatSymptoms = value;
     } else if (label.includes('열') && label.includes('달아오르')) {
       data.heatFlushSituation = value;
     }
@@ -145,11 +151,17 @@ function parseTallyData(tallyData) {
       data.alcoholFrequency = value;
     } else if (label.includes('술') && label.includes('얼마나')) {
       data.alcoholAmount = value;
-    } else if (label.includes('담배')) {
+    } else if (label.includes('술') && label.includes('증상')) {
+      data.alcoholSymptoms = value;
+    } else if (label.includes('담배') || label.includes('흡연')) {
       data.smoking = value;
+    } else if (label.includes('하루') && (label.includes('개비') || label.includes('갑'))) {
+      data.smokingAmount = value;
     }
     else if (label.includes('식사') && label.includes('몇 끼')) {
       data.mealsPerDay = value;
+    } else if (label.includes('식사') && label.includes('시간')) {
+      data.mealTimes = value;
     } else if (label.includes('식욕')) {
       data.appetite = value;
     } else if (label.includes('먹는 양') || label.includes('식사량')) {
@@ -158,17 +170,31 @@ function parseTallyData(tallyData) {
       data.digestion = value;
     } else if (label.includes('입맛')) {
       data.tasteInMouth = value;
+    } else if (label.includes('소화') && label.includes('증상')) {
+      data.digestiveSymptoms = value;
+    } else if (label.includes('식도') || label.includes('역류') || label.includes('속쓰림')) {
+      data.stomachSymptoms = value;
     } else if (label.includes('울렁') || label.includes('메슥')) {
       data.nausea = value;
+    } else if (label.includes('증상') && label.includes('상황') && (label.includes('소화') || label.includes('위'))) {
+      data.digestiveTrigger = value;
     }
-    else if (label.includes('대변') && (label.includes('며칠') || label.includes('몇번'))) {
+    else if (label.includes('대변') && (label.includes('며칠') || label.includes('몇번') || label.includes('빈도'))) {
       data.bowelFrequency = value;
     } else if (label.includes('대변') && label.includes('상태')) {
       data.stoolConsistency = value;
+    } else if (label.includes('대변') && label.includes('증상')) {
+      data.bowelSymptoms = value;
     } else if (label.includes('변비')) {
       data.constipation = value;
     } else if (label.includes('가스') || label.includes('방귀')) {
       data.gas = value;
+    } else if (label.includes('설사') && label.includes('빈도')) {
+      data.diarrheaFrequency = value;
+    } else if (label.includes('설사') && (label.includes('유발') || label.includes('상황'))) {
+      data.diarrheaTriggers = value;
+    } else if (label.includes('설사') && label.includes('정도')) {
+      data.diarrheaSeverity = value;
     } else if (label.includes('설사')) {
       data.diarrhea = value;
     }
@@ -386,8 +412,11 @@ ${data.medicalHistory || '없음'}
 ### 한열(寒熱) 관련
 - 추위 민감도: ${data.coldSensitivity || '미입력'}
 - 차가운 부위: ${data.coldAreas || '없음'}
+- 추위 관련 증상: ${data.coldSymptoms || '없음'}
+- 아랫배 증상: ${data.lowerAbdomenSymptoms || '없음'}
 - 추위 vs 더위: ${data.coldVsHeat || '미입력'}
 - 더위 민감도: ${data.heatSensitivity || '미입력'}
+- 더위 관련 증상: ${data.heatSymptoms || '없음'}
 - 열 달아오름 상황: ${data.heatFlushSituation || '없음'}
 
 ### 땀(汗)
@@ -407,22 +436,31 @@ ${data.medicalHistory || '없음'}
 - 선호 맛: ${data.tastePreference || '없음'}
 - 음주 빈도: ${data.alcoholFrequency || '미입력'}
 - 음주량: ${data.alcoholAmount || '미입력'}
+- 음주 관련 증상: ${data.alcoholSymptoms || '없음'}
 - 흡연: ${data.smoking || '미입력'}
+- 하루 흡연량: ${data.smokingAmount || '미입력'}
 
 ### 식욕/소화
 - 하루 식사 횟수: ${data.mealsPerDay || '미입력'}끼
+- 식사 시간대: ${data.mealTimes || '미입력'}
 - 식욕: ${data.appetite || '미입력'}
 - 식사량: ${data.eatingAmount || '미입력'}
 - 소화 기능: ${data.digestion || '미입력'}
 - 입맛: ${data.tasteInMouth || '미입력'}
+- 소화 관련 증상: ${data.digestiveSymptoms || '없음'}
+- 식도/위 증상: ${data.stomachSymptoms || '없음'}
 - 울렁거림: ${data.nausea || '미입력'}
+- 증상 발생 상황: ${data.digestiveTrigger || '없음'}
 
 ### 대변
 - 배변 빈도: ${data.bowelFrequency || '미입력'}
 - 변 상태: ${data.stoolConsistency || '미입력'}
+- 대변 관련 증상: ${data.bowelSymptoms || '없음'}
 - 변비 관련: ${data.constipation || '없음'}
 - 가스/방귀: ${data.gas || '없음'}
-- 설사: ${data.diarrhea || '미입력'}
+- 설사 빈도: ${data.diarrheaFrequency || '미입력'}
+- 설사 유발 상황: ${data.diarrheaTriggers || '없음'}
+- 설사 정도: ${data.diarrheaSeverity || '미입력'}
 
 ### 소변
 - 주간 소변 횟수: ${data.urinationDay || '미입력'}회
@@ -690,7 +728,18 @@ function formatAppetite(data) {
 function formatDigestion(data) {
   const parts = [];
   if (data.digestion) parts.push(data.digestion);
-  if (data.nausea && data.nausea !== '없다') parts.push('오심 ' + data.nausea);
+  if (data.digestiveSymptoms && data.digestiveSymptoms !== '해당 없음') {
+    parts.push(data.digestiveSymptoms);
+  }
+  if (data.stomachSymptoms && data.stomachSymptoms !== '해당 없음') {
+    parts.push(data.stomachSymptoms);
+  }
+  if (data.nausea && data.nausea !== '없다' && data.nausea !== '해당 없음') {
+    parts.push('오심 ' + data.nausea);
+  }
+  if (data.digestiveTrigger) {
+    parts.push('유발: ' + data.digestiveTrigger);
+  }
   return parts.join(' / ') || '';
 }
 
@@ -698,8 +747,19 @@ function formatBowel(data) {
   const parts = [];
   if (data.bowelFrequency) parts.push(data.bowelFrequency);
   if (data.stoolConsistency) parts.push(data.stoolConsistency);
+  if (data.bowelSymptoms && data.bowelSymptoms !== '해당 없음') {
+    parts.push(data.bowelSymptoms);
+  }
   if (data.constipation && data.constipation !== '해당 없음') parts.push('변비(+)');
-  if (data.diarrhea && data.diarrhea !== '거의 안 한다') parts.push('설사 ' + data.diarrhea);
+  if (data.diarrheaFrequency && data.diarrheaFrequency !== '거의 안 한다') {
+    parts.push('설사 ' + data.diarrheaFrequency);
+  }
+  if (data.diarrheaTriggers && data.diarrheaTriggers !== '해당 없음') {
+    parts.push('유발: ' + data.diarrheaTriggers);
+  }
+  if (data.diarrhea && data.diarrhea !== '거의 안 한다' && !data.diarrheaFrequency) {
+    parts.push('설사 ' + data.diarrhea);
+  }
   return parts.join(', ') || '';
 }
 
@@ -782,8 +842,20 @@ function formatColdHeat(data) {
     parts.push('한: ' + data.coldSensitivity);
     if (data.coldAreas) parts.push('(' + data.coldAreas + ')');
   }
+  if (data.coldSymptoms && data.coldSymptoms !== '해당 없음') {
+    parts.push('한증: ' + data.coldSymptoms);
+  }
+  if (data.lowerAbdomenSymptoms && data.lowerAbdomenSymptoms !== '해당 없음') {
+    parts.push('하복부: ' + data.lowerAbdomenSymptoms);
+  }
   if (data.heatSensitivity && data.heatSensitivity !== '더위를 안 탄다') {
     parts.push('열: ' + data.heatSensitivity);
+  }
+  if (data.heatSymptoms && data.heatSymptoms !== '해당 없음') {
+    parts.push('열증: ' + data.heatSymptoms);
+  }
+  if (data.heatFlushSituation) {
+    parts.push('상열: ' + data.heatFlushSituation);
   }
   return parts.join(' / ') || '';
 }
