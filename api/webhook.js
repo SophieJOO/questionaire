@@ -76,9 +76,28 @@ async function sendErrorToSlack(errorMessage) {
 function parseTallyData(tallyData) {
   const data = {};
   const formName = tallyData.data?.formName || '';
+  const formId = tallyData.data?.formId || '';
+  const responseId = tallyData.data?.responseId || '';
   const fields = tallyData.data?.fields || [];
 
   data.surveyType = getSurveyType(formName);
+  data.formId = formId;
+  data.responseId = responseId;
+
+  // Tally 응답 URL 생성
+  if (formId && responseId) {
+    data.tallyResponseUrl = `https://tally.so/r/${formId}`;
+  }
+
+  // 원본 응답 저장 (라벨: 값 형태)
+  data.rawResponses = [];
+  fields.forEach(field => {
+    const label = field.label || '';
+    const value = extractValue(field);
+    if (label && value) {
+      data.rawResponses.push({ label, value });
+    }
+  });
 
   fields.forEach(field => {
     const label = field.label || '';
@@ -900,6 +919,24 @@ function extractMode(symptomText) {
 
 // ========== SLACK ==========
 
+function formatRawResponses(rawResponses) {
+  if (!rawResponses || rawResponses.length === 0) {
+    return '응답 데이터 없음';
+  }
+
+  let text = '';
+  for (const item of rawResponses) {
+    const line = `[${item.label}] ${item.value}\n`;
+    // Slack 블록 텍스트 제한 (약 2900자)
+    if (text.length + line.length > 2800) {
+      text += '... (이하 생략)';
+      break;
+    }
+    text += line;
+  }
+  return text.trim();
+}
+
 async function sendToSlack(patientData, analysis, chartOutput) {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
@@ -915,6 +952,9 @@ async function sendToSlack(patientData, analysis, chartOutput) {
   if (pattern.secondary) {
     patternText += ` / ${pattern.secondary}`;
   }
+
+  // 원본 응답 텍스트 생성 (최대 2900자로 제한 - Slack 블록 제한)
+  const rawResponseText = formatRawResponses(patientData.rawResponses || []);
 
   const blocks = [
     {
@@ -933,6 +973,16 @@ async function sendToSlack(patientData, analysis, chartOutput) {
         { type: "mrkdwn", text: `*추정 체질:*\n${constitution.type || '분석 중'}` },
         { type: "mrkdwn", text: `*변증:*\n${patternText}` }
       ]
+    },
+    // Tally 원본 보기 링크
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: patientData.tallyResponseUrl
+          ? `📎 <${patientData.tallyResponseUrl}|Tally 설문 폼 열기>`
+          : '📎 Tally 링크 없음'
+      }
     },
     { type: "divider" },
     {
@@ -988,6 +1038,15 @@ async function sendToSlack(patientData, analysis, chartOutput) {
           text: `⏰ ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })} | Gemini AI 분석 완료`
         }
       ]
+    },
+    { type: "divider" },
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: "*📋 설문 원본 응답*" }
+    },
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: "```" + rawResponseText + "```" }
     }
   ];
 
