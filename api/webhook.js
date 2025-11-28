@@ -197,6 +197,12 @@ function parseTallyData(tallyData) {
     } else if (label.includes('어지러')) {
       data.dizziness = value;
     }
+    // 두부/안구 관련
+    else if (label.includes('안구') || label.includes('눈') && (label.includes('불편') || label.includes('피로') || label.includes('건조') || label.includes('침침') || label.includes('충혈'))) {
+      data.eyeDiscomfort = value;
+    } else if (label.includes('이명') || label.includes('귀') && label.includes('울림')) {
+      data.tinnitus = value;
+    }
     else if (label.includes('스트레스')) {
       data.stress = value;
     } else if (label.includes('불안')) {
@@ -208,9 +214,12 @@ function parseTallyData(tallyData) {
       data.chestTightness = value;
     } else if (label.includes('가슴') && label.includes('두근')) {
       data.palpitation = value;
-    } else if (label.includes('목') && label.includes('걸린')) {
+    } else if (label.includes('목') && (label.includes('걸린') || label.includes('이물') || label.includes('막힌'))) {
       data.throatDiscomfort = value;
+    } else if (label.includes('삼키') || label.includes('연하')) {
+      data.swallowingDifficulty = value;
     }
+    // 여성건강 확장
     else if (label.includes('생리') && label.includes('하고 계신')) {
       data.menstruation = value;
     } else if (label.includes('생리') && label.includes('주기')) {
@@ -219,6 +228,18 @@ function parseTallyData(tallyData) {
       data.menstrualAmount = value;
     } else if (label.includes('생리통')) {
       data.menstrualPain = value;
+    } else if (label.includes('마지막') && label.includes('생리')) {
+      data.lastMenstruation = value;
+    } else if (label.includes('출산') || label.includes('분만')) {
+      data.childbirthHistory = value;
+    } else if (label.includes('유산') || label.includes('임신') && label.includes('중단')) {
+      data.miscarriageHistory = value;
+    } else if (label.includes('임신') && (label.includes('횟수') || label.includes('경험'))) {
+      data.pregnancyHistory = value;
+    } else if (label.includes('폐경') || label.includes('완경')) {
+      data.menopause = value;
+    } else if (label.includes('대하') || label.includes('냉') || label.includes('질분비물')) {
+      data.vaginalDischarge = value;
     }
   });
 
@@ -587,10 +608,20 @@ function extractMode(symptomText) {
 }
 
 function formatHeadache(data) {
-  if (!data.headache || data.headache === '없다') return '(-)';
-  let result = data.headache;
-  if (data.headacheLocation) result += ', ' + data.headacheLocation;
-  return result;
+  const parts = [];
+  if (data.headache && data.headache !== '없다') {
+    parts.push(data.headache);
+  }
+  if (data.headacheLocation) {
+    parts.push('부위: ' + data.headacheLocation);
+  }
+  if (data.eyeDiscomfort && data.eyeDiscomfort !== '없다' && data.eyeDiscomfort !== '해당 없음') {
+    parts.push('안구: ' + data.eyeDiscomfort);
+  }
+  if (data.tinnitus && data.tinnitus !== '없다' && data.tinnitus !== '해당 없음') {
+    parts.push('이명: ' + data.tinnitus);
+  }
+  return parts.length > 0 ? parts.join(' / ') : '(-)';
 }
 
 function formatDizziness(data) {
@@ -625,8 +656,14 @@ function formatIrritability(data) {
 }
 
 function formatThroatObstruction(data) {
-  if (!data.throatDiscomfort || data.throatDiscomfort === '없다') return '(-)';
-  return '(+) ' + data.throatDiscomfort;
+  const parts = [];
+  if (data.throatDiscomfort && data.throatDiscomfort !== '없다' && data.throatDiscomfort !== '해당 없음') {
+    parts.push(data.throatDiscomfort);
+  }
+  if (data.swallowingDifficulty && data.swallowingDifficulty !== '없다' && data.swallowingDifficulty !== '해당 없음') {
+    parts.push('연하곤란: ' + data.swallowingDifficulty);
+  }
+  return parts.length > 0 ? '(+) ' + parts.join(' / ') : '(-)';
 }
 
 function formatAppetite(data) {
@@ -672,14 +709,35 @@ function formatFlatulence(data) {
 
 function formatMenstruation(data) {
   if (data.gender === '남성') return 'N/A';
-  if (!data.menstruation || data.menstruation === '없음' || data.menstruation === '폐경') {
-    return data.menstruation || 'N/A';
-  }
+
   const parts = [];
-  if (data.menstrualCycle) parts.push('주기 ' + data.menstrualCycle);
-  if (data.menstrualAmount) parts.push('양 ' + data.menstrualAmount);
-  if (data.menstrualPain) parts.push('통증 ' + data.menstrualPain);
-  return parts.join(', ') || '';
+
+  // 폐경 상태
+  if (data.menopause && data.menopause !== '아니오') {
+    parts.push('폐경');
+  } else if (data.menstruation === '폐경' || data.menstruation === '없음') {
+    parts.push(data.menstruation);
+  } else {
+    // 생리 정보
+    if (data.lastMenstruation) parts.push('LMP: ' + data.lastMenstruation);
+    if (data.menstrualCycle) parts.push('주기 ' + data.menstrualCycle);
+    if (data.menstrualAmount) parts.push('양 ' + data.menstrualAmount);
+    if (data.menstrualPain && data.menstrualPain !== '없음') parts.push('통증 ' + data.menstrualPain);
+  }
+
+  // 임신/출산력
+  if (data.pregnancyHistory) parts.push('임신 ' + data.pregnancyHistory);
+  if (data.childbirthHistory) parts.push('출산 ' + data.childbirthHistory);
+  if (data.miscarriageHistory && data.miscarriageHistory !== '없음' && data.miscarriageHistory !== '해당 없음') {
+    parts.push('유산 ' + data.miscarriageHistory);
+  }
+
+  // 대하
+  if (data.vaginalDischarge && data.vaginalDischarge !== '없음' && data.vaginalDischarge !== '해당 없음') {
+    parts.push('대하: ' + data.vaginalDischarge);
+  }
+
+  return parts.length > 0 ? parts.join(' / ') : 'N/A';
 }
 
 function formatSweating(data) {
