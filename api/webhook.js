@@ -241,6 +241,14 @@ function parseTallyData(tallyData) {
     } else if (label.includes('대하') || label.includes('냉') || label.includes('질분비물')) {
       data.vaginalDischarge = value;
     }
+    // 컨디션/패턴/기타 증상
+    else if (label.includes('나빠질 때') || label.includes('패턴') || label.includes('악화')) {
+      data.worseningPattern = value;
+    } else if (label.includes('컨디션') || label.includes('좌우') || label.includes('중요한 요소')) {
+      data.conditionFactor = value;
+    } else if (label.includes('기타') || label.includes('특이') || label.includes('알아주') || label.includes('자유롭게')) {
+      data.otherSymptoms = value;
+    }
   });
 
   return data;
@@ -449,9 +457,14 @@ ${data.medicalHistory || '없음'}
 - 생리량: ${data.menstrualAmount || '미입력'}
 - 생리통: ${data.menstrualPain || '미입력'}
 
+### 컨디션 패턴 및 특이사항 (변증 참고용 - 중요)
+- 몸 상태 나빠질 때 패턴: ${data.worseningPattern || '미입력'}
+- 컨디션 좌우 요소: ${data.conditionFactor || '미입력'}
+- 기타 특이 증상: ${data.otherSymptoms || '없음'}
+
 ---
 
-위 데이터를 바탕으로 다음을 분석해주세요:
+위 데이터를 바탕으로 다음을 분석해주세요. 특히 "컨디션 패턴 및 특이사항" 내용을 변증 도출에 중요하게 참고해주세요:
 
 1. **사상체질**: 태양인, 태음인, 소양인, 소음인 중 추정
 2. **변증**: 한의학적 변증 패턴 (예: 간비기울, 간울기체, 기음양허, 비위허한, 심비양허, 간신음허, 담음, 어혈, 기체혈어 등)
@@ -583,7 +596,7 @@ f/h) 추후 확인
 [부종] ${cs.edema || formatEdema(patientData)}
 [한열] ${cs.coldHeat || formatColdHeat(patientData)}
 [복진]
-[첨언] ${(analysis.additionalObservations || []).join(' / ') || ''}
+[첨언] ${formatAdditionalNotes(patientData, analysis)}
 [처방]`;
 
   return chart;
@@ -772,6 +785,32 @@ function formatColdHeat(data) {
   if (data.heatSensitivity && data.heatSensitivity !== '더위를 안 탄다') {
     parts.push('열: ' + data.heatSensitivity);
   }
+  return parts.join(' / ') || '';
+}
+
+function formatAdditionalNotes(data, analysis) {
+  const parts = [];
+
+  // AI 관찰사항
+  if (analysis.additionalObservations && analysis.additionalObservations.length > 0) {
+    parts.push(...analysis.additionalObservations);
+  }
+
+  // 환자 컨디션 패턴
+  if (data.worseningPattern && data.worseningPattern !== '없음' && data.worseningPattern !== '해당 없음') {
+    parts.push('악화패턴: ' + data.worseningPattern);
+  }
+
+  // 컨디션 좌우 요소
+  if (data.conditionFactor && data.conditionFactor !== '없음' && data.conditionFactor !== '해당 없음') {
+    parts.push('컨디션요소: ' + data.conditionFactor);
+  }
+
+  // 기타 특이 증상
+  if (data.otherSymptoms && data.otherSymptoms !== '없음' && data.otherSymptoms !== '해당 없음') {
+    parts.push('기타: ' + data.otherSymptoms);
+  }
+
   return parts.join(' / ') || '';
 }
 
