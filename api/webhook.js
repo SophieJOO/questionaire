@@ -402,10 +402,9 @@ ${data.medicalHistory || '없음'}
 위 데이터를 바탕으로 다음을 분석해주세요:
 
 1. **사상체질**: 태양인, 태음인, 소양인, 소음인 중 추정
-2. **팔강변증**: 음양/표리/한열/허실
-3. **장부변증**: 관련 장부 허실 상태
-4. **예상 질환**: 한의학적 병증
-5. **형색성정**: 예상되는 형/색/성/정
+2. **변증**: 한의학적 변증 패턴 (예: 간비기울, 간울기체, 기음양허, 비위허한, 심비양허, 간신음허, 담음, 어혈, 기체혈어 등)
+3. **예상 질환**: 한의학적 병증
+4. **형색성정**: 예상되는 형/색/성/정
 
 반드시 아래 JSON 형식으로만 응답해주세요:
 {
@@ -414,14 +413,10 @@ ${data.medicalHistory || '없음'}
     "confidence": "높음/중간/낮음",
     "rationale": "근거"
   },
-  "eightPrinciples": {
-    "yinYang": "음/양",
-    "exteriorInterior": "표/리",
-    "coldHeat": "한/열",
-    "deficiencyExcess": "허/실"
-  },
-  "organAnalysis": {
-    "pattern": "장부변증 패턴"
+  "patternDiagnosis": {
+    "primary": "주요 변증 (예: 간비기울)",
+    "secondary": "부차 변증 (해당시)",
+    "rationale": "변증 근거"
   },
   "expectedConditions": ["예상 질환1", "예상 질환2"],
   "formColorNatureEmotion": {
@@ -700,8 +695,14 @@ async function sendToSlack(patientData, analysis, chartOutput) {
   }
 
   const constitution = analysis.constitution || {};
-  const ep = analysis.eightPrinciples || {};
+  const pattern = analysis.patternDiagnosis || {};
   const surveyTypeLabel = getSurveyTypeLabel(patientData.surveyType);
+
+  // 변증 표시 문자열 생성
+  let patternText = pattern.primary || '-';
+  if (pattern.secondary) {
+    patternText += ` / ${pattern.secondary}`;
+  }
 
   const blocks = [
     {
@@ -718,7 +719,7 @@ async function sendToSlack(patientData, analysis, chartOutput) {
         { type: "mrkdwn", text: `*환자명:*\n${patientData.name || '미입력'}` },
         { type: "mrkdwn", text: `*성별/나이:*\n${patientData.gender || '-'} / ${patientData.age || '-'}세` },
         { type: "mrkdwn", text: `*추정 체질:*\n${constitution.type || '분석 중'}` },
-        { type: "mrkdwn", text: `*신뢰도:*\n${constitution.confidence || '-'}` }
+        { type: "mrkdwn", text: `*변증:*\n${patternText}` }
       ]
     },
     { type: "divider" },
@@ -733,7 +734,7 @@ async function sendToSlack(patientData, analysis, chartOutput) {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*⚖️ 팔강변증*\n${ep.yinYang || '-'}/${ep.exteriorInterior || '-'}/${ep.coldHeat || '-'}/${ep.deficiencyExcess || '-'}`
+        text: `*⚖️ 변증 근거*\n${pattern.rationale || '분석 필요'}`
       }
     },
     {
