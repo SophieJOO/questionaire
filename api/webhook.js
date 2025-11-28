@@ -538,27 +538,71 @@ ${data.medicalHistory || '없음'}
 
 ---
 
-위 데이터를 바탕으로 다음을 분석해주세요. 특히 "컨디션 패턴 및 특이사항" 내용을 변증 도출에 중요하게 참고해주세요:
+위 데이터를 바탕으로 다음을 종합적으로 분석해주세요. 특히 "컨디션 패턴 및 특이사항" 내용을 변증 도출에 중요하게 참고해주세요:
 
-1. **사상체질**: 태양인, 태음인, 소양인, 소음인 중 추정
+1. **사상체질**: 태양인, 태음인, 소양인, 소음인 중 추정 (설문 내 한열/소화/정신 상태 등 종합 고려)
 2. **변증**: 한의학적 변증 패턴 (예: 간비기울, 간울기체, 기음양허, 비위허한, 심비양허, 간신음허, 담음, 어혈, 기체혈어 등)
-3. **예상 질환**: 한의학적 병증
-4. **형색성정**: 예상되는 형/색/성/정
+3. **변증 상세 설명**: 해당 변증의 병리기전, 주요 증상, 환자 증상과의 연관성을 상세히 설명
+4. **예상 질환**: 한의학적 병증 및 양방 진단 참고명
+5. **치료 방향**: 치법(治法)과 치료 전략 (예: 소간해울, 건비화담, 자음강화 등)
+6. **추천 처방**: 주요 처방과 그 선택 근거
+7. **침구 치료**: 추천 경혈과 자침 방법 (예: 태충, 합곡, 족삼리 등)
+8. **생활 지도**: 생활습관 개선 권고사항 (수면, 운동, 스트레스 관리 등)
+9. **식이 요법**: 권장 음식과 피해야 할 음식
+10. **주의사항**: 치료 및 생활 시 특별히 주의할 점
+11. **예후**: 예상 치료 기간 및 경과, 호전 가능성
 
 반드시 아래 JSON 형식으로만 응답해주세요:
 {
   "constitution": {
     "type": "체질명",
     "confidence": "높음/중간/낮음",
-    "rationale": "근거"
+    "rationale": "체질 판단 근거를 상세히 기술"
   },
   "patternDiagnosis": {
     "primary": "주요 변증 (예: 간비기울)",
     "secondary": "부차 변증 (해당시)",
-    "rationale": "변증 근거"
+    "rationale": "변증 근거",
+    "pathology": "해당 변증의 병리기전과 환자 증상 연관성 상세 설명"
   },
-  "expectedConditions": ["예상 질환1", "예상 질환2"],
-  "recommendedPrescriptions": ["추천 처방1", "추천 처방2"]
+  "expectedConditions": {
+    "korean": ["한의학적 병증1", "병증2"],
+    "western": ["양방 참고 진단명1", "진단명2"]
+  },
+  "treatmentStrategy": {
+    "principle": "치법 (예: 소간해울, 건비익기)",
+    "direction": "전체 치료 방향 설명",
+    "priority": "우선 치료 대상 (주소 vs 변증)"
+  },
+  "recommendedPrescriptions": [
+    {
+      "name": "처방명",
+      "rationale": "선택 근거"
+    }
+  ],
+  "acupuncture": {
+    "mainPoints": ["주요 경혈1", "경혈2"],
+    "supplementPoints": ["보조 경혈1", "경혈2"],
+    "technique": "자침 기법 (보법/사법, 유침 시간 등)",
+    "rationale": "선혈 근거"
+  },
+  "lifestyleGuidance": {
+    "sleep": "수면 관련 권고",
+    "exercise": "운동 권고",
+    "stress": "스트레스 관리 방법",
+    "others": "기타 생활 습관"
+  },
+  "dietaryAdvice": {
+    "recommended": ["권장 음식1", "음식2"],
+    "avoid": ["피해야 할 음식1", "음식2"],
+    "rationale": "식이 권고 근거"
+  },
+  "precautions": ["주의사항1", "주의사항2"],
+  "prognosis": {
+    "duration": "예상 치료 기간",
+    "outlook": "예후 전망",
+    "factors": "호전/악화에 영향을 미치는 요인"
+  }
 }`;
 }
 
@@ -945,6 +989,11 @@ async function sendToSlack(patientData, analysis, chartOutput) {
 
   const constitution = analysis.constitution || {};
   const pattern = analysis.patternDiagnosis || {};
+  const treatment = analysis.treatmentStrategy || {};
+  const acupuncture = analysis.acupuncture || {};
+  const lifestyle = analysis.lifestyleGuidance || {};
+  const diet = analysis.dietaryAdvice || {};
+  const prognosis = analysis.prognosis || {};
   const surveyTypeLabel = getSurveyTypeLabel(patientData.surveyType);
 
   // 변증 표시 문자열 생성
@@ -952,6 +1001,74 @@ async function sendToSlack(patientData, analysis, chartOutput) {
   if (pattern.secondary) {
     patternText += ` / ${pattern.secondary}`;
   }
+
+  // 예상 질환 문자열 (새 구조 대응)
+  let conditionsText = '';
+  if (analysis.expectedConditions) {
+    if (Array.isArray(analysis.expectedConditions)) {
+      conditionsText = analysis.expectedConditions.join(', ');
+    } else {
+      const korean = analysis.expectedConditions.korean || [];
+      const western = analysis.expectedConditions.western || [];
+      if (korean.length > 0) conditionsText += `한의: ${korean.join(', ')}`;
+      if (western.length > 0) conditionsText += ` | 양방참고: ${western.join(', ')}`;
+    }
+  }
+
+  // 추천 처방 문자열 (새 구조 대응)
+  let prescriptionsText = '';
+  if (analysis.recommendedPrescriptions) {
+    if (Array.isArray(analysis.recommendedPrescriptions)) {
+      const items = analysis.recommendedPrescriptions.map(p => {
+        if (typeof p === 'string') return p;
+        return p.name ? `${p.name} (${p.rationale || ''})` : '';
+      }).filter(Boolean);
+      prescriptionsText = items.join('\n');
+    }
+  }
+
+  // 침구 치료 문자열
+  let acuText = '';
+  if (acupuncture.mainPoints && acupuncture.mainPoints.length > 0) {
+    acuText += `주혈: ${acupuncture.mainPoints.join(', ')}`;
+  }
+  if (acupuncture.supplementPoints && acupuncture.supplementPoints.length > 0) {
+    acuText += `\n보조혈: ${acupuncture.supplementPoints.join(', ')}`;
+  }
+  if (acupuncture.technique) {
+    acuText += `\n기법: ${acupuncture.technique}`;
+  }
+  if (acupuncture.rationale) {
+    acuText += `\n근거: ${acupuncture.rationale}`;
+  }
+
+  // 생활 지도 문자열
+  let lifestyleText = '';
+  if (lifestyle.sleep) lifestyleText += `수면: ${lifestyle.sleep}\n`;
+  if (lifestyle.exercise) lifestyleText += `운동: ${lifestyle.exercise}\n`;
+  if (lifestyle.stress) lifestyleText += `스트레스: ${lifestyle.stress}\n`;
+  if (lifestyle.others) lifestyleText += `기타: ${lifestyle.others}`;
+  lifestyleText = lifestyleText.trim();
+
+  // 식이 요법 문자열
+  let dietText = '';
+  if (diet.recommended && diet.recommended.length > 0) {
+    dietText += `권장: ${diet.recommended.join(', ')}\n`;
+  }
+  if (diet.avoid && diet.avoid.length > 0) {
+    dietText += `금기: ${diet.avoid.join(', ')}`;
+  }
+  dietText = dietText.trim();
+
+  // 주의사항 문자열
+  const precautionsText = (analysis.precautions || []).join('\n') || '-';
+
+  // 예후 문자열
+  let prognosisText = '';
+  if (prognosis.duration) prognosisText += `기간: ${prognosis.duration}\n`;
+  if (prognosis.outlook) prognosisText += `전망: ${prognosis.outlook}\n`;
+  if (prognosis.factors) prognosisText += `영향요인: ${prognosis.factors}`;
+  prognosisText = prognosisText.trim();
 
   // 원본 응답 텍스트 생성 (최대 2900자로 제한 - Slack 블록 제한)
   const rawResponseText = formatRawResponses(patientData.rawResponses || []);
@@ -992,36 +1109,99 @@ async function sendToSlack(patientData, analysis, chartOutput) {
         text: `*🎯 주호소*\n\`\`\`${patientData.mainSymptom1 || '미입력'}\`\`\``
       }
     },
+    { type: "divider" },
+    // ===== 변증 분석 =====
     {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*⚖️ 변증 근거*\n${pattern.rationale || '분석 필요'}`
+        text: `*⚖️ 변증 분석*\n• 변증: ${patternText}\n• 근거: ${pattern.rationale || '-'}`
       }
     },
     {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*🏥 예상 질환*\n${(analysis.expectedConditions || []).join(', ') || '분석 필요'}`
-      }
-    },
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `*💊 추천 처방 후보*\n${(analysis.recommendedPrescriptions || []).join(', ') || '진료 후 결정'}`
+        text: `*📖 병리기전*\n${pattern.pathology || '상세 분석 필요'}`
       }
     },
     { type: "divider" },
+    // ===== 체질 분석 =====
     {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*📝 체질 분석 근거*\n${constitution.rationale || '상세 분석 필요'}`
+        text: `*🧬 체질 분석*\n• 추정체질: ${constitution.type || '-'} (신뢰도: ${constitution.confidence || '-'})\n• 근거: ${constitution.rationale || '-'}`
       }
     },
     { type: "divider" },
+    // ===== 치료 전략 =====
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*🎯 치료 방향*\n• 치법: ${treatment.principle || '-'}\n• 방향: ${treatment.direction || '-'}\n• 우선순위: ${treatment.priority || '-'}`
+      }
+    },
+    { type: "divider" },
+    // ===== 예상 질환 및 처방 =====
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*🏥 예상 질환*\n${conditionsText || '분석 필요'}`
+      }
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*💊 추천 처방*\n${prescriptionsText || '진료 후 결정'}`
+      }
+    },
+    { type: "divider" },
+    // ===== 침구 치료 =====
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*🪡 침구 치료*\n${acuText || '상세 분석 필요'}`
+      }
+    },
+    { type: "divider" },
+    // ===== 생활 지도 =====
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*🏃 생활 지도*\n${lifestyleText || '-'}`
+      }
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*🥗 식이 요법*\n${dietText || '-'}`
+      }
+    },
+    { type: "divider" },
+    // ===== 주의사항 및 예후 =====
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*⚠️ 주의사항*\n${precautionsText}`
+      }
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*📈 예후*\n${prognosisText || '-'}`
+      }
+    },
+    { type: "divider" },
+    // ===== 차트 =====
     {
       type: "section",
       text: { type: "mrkdwn", text: "*📄 차트 (복사용)*" }
