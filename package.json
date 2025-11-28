@@ -1,21 +1,16 @@
 {
   "name": "patient-questionnaire-ai",
-  "version": "1.0.0",
-  "description": "환자 설문지 AI 분석 시스템 - 체질 및 예상질환 분석",
-  "main": "src/server.js",
+  "version": "2.0.0",
+  "description": "환자 설문지 AI 분석 시스템 - Tally → Gemini AI → Slack",
   "type": "module",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "vercel dev",
+    "build": "vercel build"
   },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.30.0",
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "body-parser": "^1.20.2"
-  },
-  "keywords": ["한의학", "설문지", "AI", "체질분석"],
+  "keywords": ["한의학", "설문지", "AI", "체질분석", "tally", "vercel"],
   "author": "아현재한의원",
-  "license": "MIT"
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
 }
