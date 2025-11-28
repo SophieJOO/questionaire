@@ -4,8 +4,7 @@
   "description": "환자 설문지 AI 분석 시스템 - Tally → Gemini AI → Slack",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "vercel build"
+    "dev": "vercel dev"
   },
   "keywords": ["한의학", "설문지", "AI", "체질분석", "tally", "vercel"],
   "author": "아현재한의원",
