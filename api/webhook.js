@@ -522,34 +522,7 @@ ${data.medicalHistory || '없음'}
     "rationale": "변증 근거"
   },
   "expectedConditions": ["예상 질환1", "예상 질환2"],
-  "formColorNatureEmotion": {
-    "form": "형",
-    "color": "색",
-    "nature": "성",
-    "emotion": "정"
-  },
-  "chartSummary": {
-    "headache": "두통 요약",
-    "dizziness": "현훈 요약",
-    "thirst": "구갈 요약",
-    "bitterMouth": "구고 요약",
-    "chestFullness": "흉만 요약",
-    "irritability": "심번 요약",
-    "throatObstruction": "매핵 요약",
-    "appetite": "식욕 요약",
-    "digestion": "소화 요약",
-    "bowel": "대변 요약",
-    "urination": "소변 요약",
-    "belching": "트림 요약",
-    "flatulence": "방귀 요약",
-    "menstruation": "생리 요약",
-    "sweating": "한출 요약",
-    "sleep": "수면 요약",
-    "edema": "부종 요약",
-    "coldHeat": "한열 요약"
-  },
-  "recommendedPrescriptions": ["추천 처방1", "추천 처방2"],
-  "additionalObservations": ["관찰사항1"]
+  "recommendedPrescriptions": ["추천 처방1", "추천 처방2"]
 }`;
 }
 
@@ -585,59 +558,278 @@ function formatChart(patientData, analysis) {
   const height = parseFloat(patientData.height) || 0;
   const weight = parseFloat(patientData.weight) || 0;
   const bmi = height > 0 ? (weight / Math.pow(height / 100, 2)).toFixed(1) : '-';
+  const gender = patientData.gender === '남성' ? 'M' : patientData.gender === '여성' ? 'F' : '_';
 
-  const fcne = analysis.formColorNatureEmotion || {};
-  const formColorNatureEmotion = [fcne.form, fcne.color, fcne.nature, fcne.emotion]
-    .filter(Boolean).join(' / ') || '추후 확인';
+  const pattern = analysis.patternDiagnosis || {};
+  const constitution = analysis.constitution || {};
 
-  const cs = analysis.chartSummary || {};
+  // 주호소 포맷
+  let chiefComplaint = '';
+  if (patientData.mainSymptom1) {
+    chiefComplaint += `#1. ${patientData.mainSymptom1}`;
+  }
+  if (patientData.mainSymptom2) {
+    chiefComplaint += `\n#2. ${patientData.mainSymptom2}`;
+  }
+  if (patientData.mainSymptom3) {
+    chiefComplaint += `\n#3. ${patientData.mainSymptom3}`;
+  }
 
-  const chart = `${patientData.name || '___'}/${patientData.gender === '남성' ? 'M' : patientData.gender === '여성' ? 'F' : '_'}/${patientData.age || '__'}세/${patientData.occupation || '___'}
+  const chart = `[기본정보] ${patientData.name || '___'}/${gender}/${patientData.age || '__'}세/${patientData.occupation || '___'}
 ${height || '___'}cm/${weight || '___'}kg BMI ${bmi}
-BP ___/___ mmHg  PR ___회/분
-형색성정: ${formColorNatureEmotion}
 
-[주소]
-#1. ${extractSymptomName(patientData.mainSymptom1)}
-o/s) ${extractOnset(patientData.mainSymptom1)}
-mode) ${extractMode(patientData.mainSymptom1)}
-${patientData.mainSymptom2 ? `
-#2. ${extractSymptomName(patientData.mainSymptom2)}
-o/s) ${extractOnset(patientData.mainSymptom2)}
-mode) ${extractMode(patientData.mainSymptom2)}` : ''}
-${patientData.mainSymptom3 ? `
-#3. ${extractSymptomName(patientData.mainSymptom3)}
-o/s) ${extractOnset(patientData.mainSymptom3)}
-mode) ${extractMode(patientData.mainSymptom3)}` : ''}
+[주호소]
+${chiefComplaint || '미입력'}
 
+[현병력]
 po med) ${patientData.currentMedication || '없음'}
 p/h) ${patientData.medicalHistory || '없음'}
-f/h) 추후 확인
 
-[부증]
-[두통] ${cs.headache || formatHeadache(patientData)}
-[현훈] ${cs.dizziness || formatDizziness(patientData)}
-[구갈] ${cs.thirst || formatThirst(patientData)}
-[구고] ${cs.bitterMouth || formatBitterMouth(patientData)}
-[흉만] ${cs.chestFullness || formatChestFullness(patientData)}
-[심번] ${cs.irritability || formatIrritability(patientData)}
-[매핵] ${cs.throatObstruction || formatThroatObstruction(patientData)}
-[식욕] ${cs.appetite || formatAppetite(patientData)}
-[소화] ${cs.digestion || formatDigestion(patientData)}
-[대변] ${cs.bowel || formatBowel(patientData)}
-[소변] ${cs.urination || formatUrination(patientData)}
-[트림] ${cs.belching || '(-)'}
-[방귀] ${cs.flatulence || formatFlatulence(patientData)}
-[생리] ${cs.menstruation || formatMenstruation(patientData)}
-[한출] ${cs.sweating || formatSweating(patientData)}
-[수면] ${cs.sleep || formatSleep(patientData)}
-[부종] ${cs.edema || formatEdema(patientData)}
-[한열] ${cs.coldHeat || formatColdHeat(patientData)}
+[한열] ${formatColdHeatNew(patientData)}
+[한출] ${formatSweatingNew(patientData)}
+[음수] ${formatWaterIntake(patientData)}
+[식욕/소화] ${formatDigestionNew(patientData)}
+[대변] ${formatBowelNew(patientData)}
+[소변] ${formatUrinationNew(patientData)}
+[수면] ${formatSleepNew(patientData)}
+[두부] ${formatHeadNew(patientData)}
+[흉복] ${formatChestAbdomen(patientData)}
+[정서] ${formatMentalNew(patientData)}
+[기호] ${formatPreferences(patientData)}
+[여성] ${formatWomenHealth(patientData)}
+
+[특이사항]
+${formatSpecialNotes(patientData)}
+
+[AI분석]
+체질: ${constitution.type || '-'} (${constitution.confidence || '-'})
+변증: ${pattern.primary || '-'}${pattern.secondary ? ' / ' + pattern.secondary : ''}
+근거: ${pattern.rationale || '-'}
+
 [복진]
-[첨언] ${formatAdditionalNotes(patientData, analysis)}
 [처방]`;
 
   return chart;
+}
+
+// ===== 새로운 포맷 함수들 =====
+
+function formatColdHeatNew(data) {
+  const parts = [];
+
+  // 추위/더위 비교
+  if (data.coldVsHeat) parts.push(data.coldVsHeat);
+
+  // 추위 관련
+  if (data.coldSensitivity && data.coldSensitivity !== '추위를 안 탄다') {
+    parts.push('추위' + (data.coldSensitivity.includes('많이') ? '多' : ''));
+  }
+  if (data.coldAreas) parts.push(data.coldAreas + ' 차가움');
+  if (data.coldSymptoms && data.coldSymptoms !== '해당 없음') {
+    parts.push(data.coldSymptoms);
+  }
+  if (data.lowerAbdomenSymptoms && data.lowerAbdomenSymptoms !== '해당 없음') {
+    parts.push('하복부: ' + data.lowerAbdomenSymptoms);
+  }
+
+  // 더위 관련
+  if (data.heatSensitivity && data.heatSensitivity !== '더위를 안 탄다') {
+    parts.push('더위' + (data.heatSensitivity.includes('많이') ? '多' : ''));
+  }
+  if (data.heatSymptoms && data.heatSymptoms !== '해당 없음') {
+    parts.push(data.heatSymptoms);
+  }
+  if (data.heatFlushSituation) {
+    parts.push('상열: ' + data.heatFlushSituation);
+  }
+
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatSweatingNew(data) {
+  const parts = [];
+  if (data.sweatAmount) parts.push(data.sweatAmount);
+  if (data.sweatAreas) parts.push(data.sweatAreas);
+  if (data.sweatEffect) parts.push('땀 후 ' + data.sweatEffect);
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatWaterIntake(data) {
+  const parts = [];
+  if (data.waterIntake) parts.push(data.waterIntake + 'L/일');
+  if (data.waterTemperature) parts.push(data.waterTemperature);
+  if (data.thirst && data.thirst !== '해당 없음') parts.push('구갈(+)');
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatDigestionNew(data) {
+  const parts = [];
+  if (data.appetite) parts.push('식욕 ' + data.appetite);
+  if (data.eatingAmount) parts.push(data.eatingAmount);
+  if (data.mealsPerDay) parts.push(data.mealsPerDay + '끼');
+  if (data.digestion) parts.push('소화 ' + data.digestion);
+  if (data.digestiveSymptoms && data.digestiveSymptoms !== '해당 없음') {
+    parts.push(data.digestiveSymptoms);
+  }
+  if (data.stomachSymptoms && data.stomachSymptoms !== '해당 없음') {
+    parts.push(data.stomachSymptoms);
+  }
+  if (data.nausea && data.nausea !== '없다' && data.nausea !== '해당 없음') {
+    parts.push('오심(+)');
+  }
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatBowelNew(data) {
+  const parts = [];
+  if (data.bowelFrequency) parts.push(data.bowelFrequency);
+  if (data.stoolConsistency) parts.push(data.stoolConsistency);
+  if (data.bowelSymptoms && data.bowelSymptoms !== '해당 없음') {
+    parts.push(data.bowelSymptoms);
+  }
+  if (data.constipation && data.constipation !== '해당 없음') parts.push('변비(+)');
+  if (data.diarrheaFrequency && data.diarrheaFrequency !== '거의 안 한다') {
+    parts.push('설사 ' + data.diarrheaFrequency);
+  }
+  if (data.diarrheaTriggers && data.diarrheaTriggers !== '해당 없음') {
+    parts.push('유발: ' + data.diarrheaTriggers);
+  }
+  if (data.gas && data.gas !== '해당 없음') parts.push('가스(+)');
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatUrinationNew(data) {
+  const parts = [];
+  if (data.urinationDay) parts.push('주간 ' + data.urinationDay + '회');
+  if (data.urinationNight && parseInt(data.urinationNight) > 0) {
+    parts.push('야간 ' + data.urinationNight + '회');
+  }
+  if (data.urinationSymptoms && data.urinationSymptoms !== '해당 없음') {
+    parts.push(data.urinationSymptoms);
+  }
+  if (data.edema && data.edema !== '없다' && data.edema !== '해당 없음') {
+    parts.push('부종: ' + data.edema);
+  }
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatSleepNew(data) {
+  const parts = [];
+  if (data.sleepHours) parts.push(data.sleepHours + '시간');
+  if (data.sleepQuality) parts.push(data.sleepQuality);
+  if (data.sleepIssues && data.sleepIssues !== '해당 없음') {
+    parts.push(data.sleepIssues);
+  }
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatHeadNew(data) {
+  const parts = [];
+  if (data.headache && data.headache !== '없다') {
+    parts.push('두통: ' + data.headache);
+    if (data.headacheLocation) parts.push(data.headacheLocation);
+  }
+  if (data.dizziness && data.dizziness !== '없다') {
+    parts.push('어지러움: ' + data.dizziness);
+  }
+  if (data.eyeDiscomfort && data.eyeDiscomfort !== '없다' && data.eyeDiscomfort !== '해당 없음') {
+    parts.push('안구: ' + data.eyeDiscomfort);
+  }
+  if (data.tinnitus && data.tinnitus !== '없다' && data.tinnitus !== '해당 없음') {
+    parts.push('이명(+)');
+  }
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatChestAbdomen(data) {
+  const parts = [];
+  if (data.chestTightness && data.chestTightness !== '없다') {
+    parts.push('흉민: ' + data.chestTightness);
+  }
+  if (data.palpitation && data.palpitation !== '없다') {
+    parts.push('심계: ' + data.palpitation);
+  }
+  if (data.throatDiscomfort && data.throatDiscomfort !== '없다' && data.throatDiscomfort !== '해당 없음') {
+    parts.push('매핵: ' + data.throatDiscomfort);
+  }
+  if (data.swallowingDifficulty && data.swallowingDifficulty !== '없다' && data.swallowingDifficulty !== '해당 없음') {
+    parts.push('연하곤란(+)');
+  }
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatMentalNew(data) {
+  const parts = [];
+  if (data.stress) parts.push('스트레스 ' + data.stress);
+  if (data.anxiety && data.anxiety !== '없다' && data.anxiety !== '해당 없음') {
+    parts.push('불안(+)');
+  }
+  if (data.depression && data.depression !== '없다' && data.depression !== '해당 없음') {
+    parts.push('우울(+)');
+  }
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatPreferences(data) {
+  const parts = [];
+  if (data.tastePreference) parts.push('선호: ' + data.tastePreference);
+  if (data.alcoholFrequency && data.alcoholFrequency !== '안 마신다') {
+    let alcohol = '음주 ' + data.alcoholFrequency;
+    if (data.alcoholAmount) alcohol += ' ' + data.alcoholAmount;
+    parts.push(alcohol);
+  }
+  if (data.alcoholSymptoms && data.alcoholSymptoms !== '해당 없음') {
+    parts.push('음주증상: ' + data.alcoholSymptoms);
+  }
+  if (data.smoking && data.smoking !== '안 피운다' && data.smoking !== '비흡연') {
+    let smoke = '흡연 ' + data.smoking;
+    if (data.smokingAmount) smoke += ' ' + data.smokingAmount;
+    parts.push(smoke);
+  }
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatWomenHealth(data) {
+  if (data.gender === '남성') return 'N/A';
+
+  const parts = [];
+
+  if (data.menopause && data.menopause !== '아니오') {
+    parts.push('폐경');
+  } else if (data.menstruation === '폐경' || data.menstruation === '없음') {
+    parts.push(data.menstruation);
+  } else {
+    if (data.lastMenstruation) parts.push('LMP ' + data.lastMenstruation);
+    if (data.menstrualCycle) parts.push('주기 ' + data.menstrualCycle);
+    if (data.menstrualAmount) parts.push('양 ' + data.menstrualAmount);
+    if (data.menstrualPain && data.menstrualPain !== '없음') parts.push('통증 ' + data.menstrualPain);
+  }
+
+  if (data.childbirthHistory) parts.push('출산 ' + data.childbirthHistory);
+  if (data.miscarriageHistory && data.miscarriageHistory !== '없음' && data.miscarriageHistory !== '해당 없음') {
+    parts.push('유산 ' + data.miscarriageHistory);
+  }
+  if (data.vaginalDischarge && data.vaginalDischarge !== '없음' && data.vaginalDischarge !== '해당 없음') {
+    parts.push('대하(+)');
+  }
+
+  return parts.length > 0 ? parts.join(' / ') : '-';
+}
+
+function formatSpecialNotes(data) {
+  const notes = [];
+
+  if (data.worseningPattern && data.worseningPattern !== '없음' && data.worseningPattern !== '해당 없음') {
+    notes.push('- 악화패턴: ' + data.worseningPattern);
+  }
+  if (data.conditionFactor && data.conditionFactor !== '없음' && data.conditionFactor !== '해당 없음') {
+    notes.push('- 컨디션요소: ' + data.conditionFactor);
+  }
+  if (data.otherSymptoms && data.otherSymptoms !== '없음' && data.otherSymptoms !== '해당 없음') {
+    notes.push('- 기타: ' + data.otherSymptoms);
+  }
+
+  return notes.length > 0 ? notes.join('\n') : '- 없음';
 }
 
 function extractSymptomName(symptomText) {
@@ -658,233 +850,7 @@ function extractMode(symptomText) {
   return parts.length > 1 ? parts[1].trim() : '';
 }
 
-function formatHeadache(data) {
-  const parts = [];
-  if (data.headache && data.headache !== '없다') {
-    parts.push(data.headache);
-  }
-  if (data.headacheLocation) {
-    parts.push('부위: ' + data.headacheLocation);
-  }
-  if (data.eyeDiscomfort && data.eyeDiscomfort !== '없다' && data.eyeDiscomfort !== '해당 없음') {
-    parts.push('안구: ' + data.eyeDiscomfort);
-  }
-  if (data.tinnitus && data.tinnitus !== '없다' && data.tinnitus !== '해당 없음') {
-    parts.push('이명: ' + data.tinnitus);
-  }
-  return parts.length > 0 ? parts.join(' / ') : '(-)';
-}
-
-function formatDizziness(data) {
-  if (!data.dizziness || data.dizziness === '없다') return '(-)';
-  return data.dizziness;
-}
-
-function formatThirst(data) {
-  if (!data.thirst || data.thirst === '해당 없음') {
-    let result = '(-)';
-    if (data.waterIntake) result = `물 ${data.waterIntake}L/일`;
-    if (data.waterTemperature) result += ` (${data.waterTemperature})`;
-    return result;
-  }
-  let result = data.thirst;
-  if (data.waterIntake) result += ` / 물 ${data.waterIntake}L/일`;
-  return result;
-}
-
-function formatBitterMouth(data) {
-  return data.tasteInMouth === '쓰다' ? '(+)' : '(-)';
-}
-
-function formatChestFullness(data) {
-  if (!data.chestTightness || data.chestTightness === '없다') return '(-)';
-  return '(+) ' + data.chestTightness;
-}
-
-function formatIrritability(data) {
-  if (!data.palpitation || data.palpitation === '없다') return '(-)';
-  return '(+) ' + data.palpitation;
-}
-
-function formatThroatObstruction(data) {
-  const parts = [];
-  if (data.throatDiscomfort && data.throatDiscomfort !== '없다' && data.throatDiscomfort !== '해당 없음') {
-    parts.push(data.throatDiscomfort);
-  }
-  if (data.swallowingDifficulty && data.swallowingDifficulty !== '없다' && data.swallowingDifficulty !== '해당 없음') {
-    parts.push('연하곤란: ' + data.swallowingDifficulty);
-  }
-  return parts.length > 0 ? '(+) ' + parts.join(' / ') : '(-)';
-}
-
-function formatAppetite(data) {
-  const parts = [];
-  if (data.appetite) parts.push(data.appetite);
-  if (data.eatingAmount) parts.push('식사량 ' + data.eatingAmount);
-  if (data.mealsPerDay) parts.push(data.mealsPerDay + '끼/일');
-  return parts.join(', ') || '';
-}
-
-function formatDigestion(data) {
-  const parts = [];
-  if (data.digestion) parts.push(data.digestion);
-  if (data.digestiveSymptoms && data.digestiveSymptoms !== '해당 없음') {
-    parts.push(data.digestiveSymptoms);
-  }
-  if (data.stomachSymptoms && data.stomachSymptoms !== '해당 없음') {
-    parts.push(data.stomachSymptoms);
-  }
-  if (data.nausea && data.nausea !== '없다' && data.nausea !== '해당 없음') {
-    parts.push('오심 ' + data.nausea);
-  }
-  if (data.digestiveTrigger) {
-    parts.push('유발: ' + data.digestiveTrigger);
-  }
-  return parts.join(' / ') || '';
-}
-
-function formatBowel(data) {
-  const parts = [];
-  if (data.bowelFrequency) parts.push(data.bowelFrequency);
-  if (data.stoolConsistency) parts.push(data.stoolConsistency);
-  if (data.bowelSymptoms && data.bowelSymptoms !== '해당 없음') {
-    parts.push(data.bowelSymptoms);
-  }
-  if (data.constipation && data.constipation !== '해당 없음') parts.push('변비(+)');
-  if (data.diarrheaFrequency && data.diarrheaFrequency !== '거의 안 한다') {
-    parts.push('설사 ' + data.diarrheaFrequency);
-  }
-  if (data.diarrheaTriggers && data.diarrheaTriggers !== '해당 없음') {
-    parts.push('유발: ' + data.diarrheaTriggers);
-  }
-  if (data.diarrhea && data.diarrhea !== '거의 안 한다' && !data.diarrheaFrequency) {
-    parts.push('설사 ' + data.diarrhea);
-  }
-  return parts.join(', ') || '';
-}
-
-function formatUrination(data) {
-  const parts = [];
-  if (data.urinationDay) parts.push('주간 ' + data.urinationDay + '회');
-  if (data.urinationNight && parseInt(data.urinationNight) > 0) {
-    parts.push('야간뇨 ' + data.urinationNight + '회');
-  }
-  if (data.urinationSymptoms && data.urinationSymptoms !== '해당 없음') {
-    parts.push(data.urinationSymptoms);
-  }
-  return parts.join(', ') || '';
-}
-
-function formatFlatulence(data) {
-  if (!data.gas || data.gas === '해당 없음') return '(-)';
-  return '(+) ' + data.gas;
-}
-
-function formatMenstruation(data) {
-  if (data.gender === '남성') return 'N/A';
-
-  const parts = [];
-
-  // 폐경 상태
-  if (data.menopause && data.menopause !== '아니오') {
-    parts.push('폐경');
-  } else if (data.menstruation === '폐경' || data.menstruation === '없음') {
-    parts.push(data.menstruation);
-  } else {
-    // 생리 정보
-    if (data.lastMenstruation) parts.push('LMP: ' + data.lastMenstruation);
-    if (data.menstrualCycle) parts.push('주기 ' + data.menstrualCycle);
-    if (data.menstrualAmount) parts.push('양 ' + data.menstrualAmount);
-    if (data.menstrualPain && data.menstrualPain !== '없음') parts.push('통증 ' + data.menstrualPain);
-  }
-
-  // 임신/출산력
-  if (data.pregnancyHistory) parts.push('임신 ' + data.pregnancyHistory);
-  if (data.childbirthHistory) parts.push('출산 ' + data.childbirthHistory);
-  if (data.miscarriageHistory && data.miscarriageHistory !== '없음' && data.miscarriageHistory !== '해당 없음') {
-    parts.push('유산 ' + data.miscarriageHistory);
-  }
-
-  // 대하
-  if (data.vaginalDischarge && data.vaginalDischarge !== '없음' && data.vaginalDischarge !== '해당 없음') {
-    parts.push('대하: ' + data.vaginalDischarge);
-  }
-
-  return parts.length > 0 ? parts.join(' / ') : 'N/A';
-}
-
-function formatSweating(data) {
-  const parts = [];
-  if (data.sweatAmount) parts.push(data.sweatAmount);
-  if (data.sweatAreas) parts.push('부위: ' + data.sweatAreas);
-  if (data.sweatEffect) parts.push('땀 후: ' + data.sweatEffect);
-  return parts.join(' / ') || '';
-}
-
-function formatSleep(data) {
-  const parts = [];
-  if (data.sleepHours) parts.push(data.sleepHours + '시간');
-  if (data.sleepQuality) parts.push(data.sleepQuality);
-  if (data.sleepProblems && data.sleepProblems !== '해당 없음') parts.push(data.sleepProblems);
-  if (data.dreams) parts.push('꿈: ' + data.dreams);
-  return parts.join(', ') || '';
-}
-
-function formatEdema(data) {
-  if (!data.edema || data.edema === '거의 안 붓는다') return '(-)';
-  return '(+) ' + data.edema;
-}
-
-function formatColdHeat(data) {
-  const parts = [];
-  if (data.coldVsHeat) parts.push(data.coldVsHeat);
-  if (data.coldSensitivity && data.coldSensitivity !== '추위를 안 탄다') {
-    parts.push('한: ' + data.coldSensitivity);
-    if (data.coldAreas) parts.push('(' + data.coldAreas + ')');
-  }
-  if (data.coldSymptoms && data.coldSymptoms !== '해당 없음') {
-    parts.push('한증: ' + data.coldSymptoms);
-  }
-  if (data.lowerAbdomenSymptoms && data.lowerAbdomenSymptoms !== '해당 없음') {
-    parts.push('하복부: ' + data.lowerAbdomenSymptoms);
-  }
-  if (data.heatSensitivity && data.heatSensitivity !== '더위를 안 탄다') {
-    parts.push('열: ' + data.heatSensitivity);
-  }
-  if (data.heatSymptoms && data.heatSymptoms !== '해당 없음') {
-    parts.push('열증: ' + data.heatSymptoms);
-  }
-  if (data.heatFlushSituation) {
-    parts.push('상열: ' + data.heatFlushSituation);
-  }
-  return parts.join(' / ') || '';
-}
-
-function formatAdditionalNotes(data, analysis) {
-  const parts = [];
-
-  // AI 관찰사항
-  if (analysis.additionalObservations && analysis.additionalObservations.length > 0) {
-    parts.push(...analysis.additionalObservations);
-  }
-
-  // 환자 컨디션 패턴
-  if (data.worseningPattern && data.worseningPattern !== '없음' && data.worseningPattern !== '해당 없음') {
-    parts.push('악화패턴: ' + data.worseningPattern);
-  }
-
-  // 컨디션 좌우 요소
-  if (data.conditionFactor && data.conditionFactor !== '없음' && data.conditionFactor !== '해당 없음') {
-    parts.push('컨디션요소: ' + data.conditionFactor);
-  }
-
-  // 기타 특이 증상
-  if (data.otherSymptoms && data.otherSymptoms !== '없음' && data.otherSymptoms !== '해당 없음') {
-    parts.push('기타: ' + data.otherSymptoms);
-  }
-
-  return parts.join(' / ') || '';
-}
+// 이전 포맷 함수들은 새로운 formatChart에서 사용하지 않음 (제거됨)
 
 // ========== SLACK ==========
 
