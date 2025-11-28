@@ -86,15 +86,15 @@ function parseTallyData(tallyData) {
 
     if (!value) return;
 
-    if (label.includes('성함') || label.includes('이름')) {
+    if (label.includes('성함') || label.includes('이름') || label.includes('성명')) {
       data.name = value;
-    } else if (label.includes('성별')) {
+    } else if (label.includes('성별') || label.includes('남/녀') || label.includes('남녀')) {
       data.gender = value;
-    } else if (label.includes('나이')) {
+    } else if (label.includes('나이') || label.includes('연령') || label.includes('만 ') || label.includes('출생')) {
       data.age = value;
-    } else if (label.includes('직업')) {
+    } else if (label.includes('직업') || label.includes('직종') || label.includes('하시는 일')) {
       data.occupation = value;
-    } else if (label.includes('키') && !label.includes('트림')) {
+    } else if ((label.includes('키') || label.includes('신장')) && !label.includes('트림')) {
       data.height = value;
     } else if (label.includes('체중') || label.includes('몸무게')) {
       data.weight = value;
@@ -226,18 +226,35 @@ function parseTallyData(tallyData) {
 }
 
 function extractValue(field) {
+  // 1. 직접 값이 있는 경우 (텍스트 입력, 숫자 등)
   if (field.value !== undefined && field.value !== null && field.value !== '') {
     if (Array.isArray(field.value)) {
       return field.value.join(', ');
     }
     return String(field.value);
   }
-  if (field.options && field.options.length > 0) {
-    const selected = field.options.filter(opt => opt.id === field.value);
-    if (selected.length > 0) {
-      return selected.map(opt => opt.text).join(', ');
+
+  // 2. 선택형 필드 (드롭다운, 라디오 버튼 등) - options 배열에서 text 추출
+  if (field.options && Array.isArray(field.options)) {
+    const selectedOptions = field.options.filter(opt => opt.id);
+    if (selectedOptions.length > 0) {
+      return selectedOptions.map(opt => opt.text || opt.name || opt.value).join(', ');
     }
   }
+
+  // 3. answer 필드가 있는 경우
+  if (field.answer !== undefined && field.answer !== null && field.answer !== '') {
+    if (Array.isArray(field.answer)) {
+      return field.answer.join(', ');
+    }
+    return String(field.answer);
+  }
+
+  // 4. text 필드가 있는 경우
+  if (field.text) {
+    return String(field.text);
+  }
+
   return null;
 }
 
