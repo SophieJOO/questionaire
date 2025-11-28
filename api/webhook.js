@@ -260,7 +260,7 @@ async function analyzeWithGemini(patientData) {
     throw new Error('GEMINI_API_KEY 환경변수가 설정되지 않았습니다');
   }
 
-  const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
   const prompt = buildAnalysisPrompt(patientData);
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
