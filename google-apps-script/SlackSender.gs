@@ -2,9 +2,31 @@
  * Slack 메시지 전송 함수들
  */
 
+/**
+ * 설문 유형 라벨 변환
+ */
+function getSurveyTypeLabel(sheetName) {
+  if (!sheetName) return '일반';
+
+  // 시트 이름에서 설문 유형 추출
+  const name = sheetName.toLowerCase();
+
+  if (name.includes('성인') || name.includes('adult')) return '성인';
+  if (name.includes('청소년') || name.includes('teen')) return '청소년';
+  if (name.includes('다이어트') || name.includes('diet')) return '다이어트';
+  if (name.includes('자보') || name.includes('자동차') || name.includes('보험')) return '자동차보험';
+  if (name.includes('소아') || name.includes('아동') || name.includes('child')) return '소아';
+
+  // 매칭 안되면 시트 이름 그대로 반환
+  return sheetName;
+}
+
 function sendToSlack(patientData, analysis, chartOutput) {
   const constitution = analysis.constitution || {};
   const ep = analysis.eightPrinciples || {};
+
+  // 설문 유형 라벨 설정
+  const surveyTypeLabel = getSurveyTypeLabel(patientData.surveyType);
 
   // Slack Block Kit 메시지 구성
   const blocks = [
@@ -12,7 +34,7 @@ function sendToSlack(patientData, analysis, chartOutput) {
       type: "header",
       text: {
         type: "plain_text",
-        text: "📋 새 환자 설문 접수",
+        text: `📋 새 환자 설문 접수 [${surveyTypeLabel}]`,
         emoji: true
       }
     },

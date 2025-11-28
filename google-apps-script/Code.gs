@@ -11,8 +11,10 @@
 const CONFIG = {
   GEMINI_API_KEY: 'YOUR_GEMINI_API_KEY_HERE',  // Google AI Studio API 키
   SLACK_WEBHOOK_URL: 'YOUR_SLACK_WEBHOOK_URL_HERE',  // Slack Incoming Webhook URL
-  SHEET_NAME: '설문응답',  // 시트 이름 (Tally가 데이터 저장하는 시트)
   GEMINI_MODEL: 'gemini-1.5-flash',  // 사용할 Gemini 모델 (gemini-1.5-pro, gemini-1.5-flash)
+
+  // 제외할 시트 이름 (분석하지 않을 시트)
+  EXCLUDED_SHEETS: ['설정', '통계', 'Sheet1', '시트1'],
 };
 
 // ============================================
@@ -20,13 +22,40 @@ const CONFIG = {
 // ============================================
 function onFormSubmit(e) {
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
-    const lastRow = sheet.getLastRow();
+    // 변경된 시트 자동 감지
+    let sheet;
+    let lastRow;
+
+    if (e && e.range) {
+      // 트리거 이벤트에서 시트 정보 가져오기
+      sheet = e.range.getSheet();
+      lastRow = e.range.getRow();
+    } else {
+      // 수동 실행 시 활성 시트의 마지막 행
+      sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+      lastRow = sheet.getLastRow();
+    }
+
+    const sheetName = sheet.getName();
+
+    // 제외할 시트인지 확인
+    if (CONFIG.EXCLUDED_SHEETS.includes(sheetName)) {
+      Logger.log('제외된 시트: ' + sheetName);
+      return;
+    }
+
+    // 데이터가 있는지 확인
+    if (lastRow < 2) {
+      Logger.log('데이터가 없습니다.');
+      return;
+    }
+
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     const values = sheet.getRange(lastRow, 1, 1, sheet.getLastColumn()).getValues()[0];
 
-    // 데이터 파싱
+    // 데이터 파싱 (시트 이름도 포함)
     const patientData = parseSheetData(headers, values);
+    patientData.surveyType = sheetName;  // 설문 유형 (시트 이름)
 
     // AI 분석 수행
     const analysis = analyzeWithGemini(patientData);
@@ -34,13 +63,13 @@ function onFormSubmit(e) {
     // 차트 포맷팅
     const chartOutput = formatChart(patientData, analysis);
 
-    // Slack 전송
+    // Slack 전송 (설문 유형 포함)
     sendToSlack(patientData, analysis, chartOutput);
 
     // 분석 결과를 시트에도 기록 (선택사항)
     recordAnalysis(sheet, lastRow, analysis);
 
-    Logger.log('분석 완료: ' + patientData.name);
+    Logger.log('분석 완료: ' + patientData.name + ' (시트: ' + sheetName + ')');
 
   } catch (error) {
     Logger.log('오류 발생: ' + error.message);
@@ -49,15 +78,26 @@ function onFormSubmit(e) {
 }
 
 // ============================================
-// 수동 실행 함수 (테스트용)
+// 수동 실행 함수 (테스트용) - 현재 활성 시트에서 실행
 // ============================================
 function testAnalysis() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
+  // 현재 활성화된 시트에서 테스트
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const sheetName = sheet.getName();
   const lastRow = sheet.getLastRow();
+
+  Logger.log('테스트 시트: ' + sheetName + ', 마지막 행: ' + lastRow);
+
+  if (lastRow < 2) {
+    Logger.log('데이터가 없습니다. 시트에 설문 데이터를 먼저 추가해주세요.');
+    return;
+  }
+
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const values = sheet.getRange(lastRow, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   const patientData = parseSheetData(headers, values);
+  patientData.surveyType = sheetName;
   Logger.log('파싱된 데이터: ' + JSON.stringify(patientData));
 
   const analysis = analyzeWithGemini(patientData);
