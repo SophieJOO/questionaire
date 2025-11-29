@@ -254,9 +254,19 @@ function parseTallyData(tallyData) {
     }
     else if (label.includes('수면') && label.includes('시간')) {
       data.sleepHours = value;
-    } else if (label.includes('취침') || (label.includes('잠') && label.includes('드는'))) {
+    } else if ((label.includes('주무') && label.includes('일어나')) || (label.includes('취침') && label.includes('기상'))) {
+      // "몇 시에 주무시고 몇 시에 일어나시나요" 형태 - 복합 응답 처리
+      // 예: "22시반~7시반", "23시~7시", "11시-6시"
+      const timeMatch = value.match(/(\d{1,2}시(?:반)?)\s*[~\-]\s*(\d{1,2}시(?:반)?)/);
+      if (timeMatch) {
+        data.bedTime = timeMatch[1];
+        data.wakeTime = timeMatch[2];
+      } else {
+        data.sleepTimeRaw = value; // 파싱 실패시 원본 저장
+      }
+    } else if (label.includes('취침') || (label.includes('잠') && label.includes('드는')) || label.includes('주무시는')) {
       data.bedTime = value;
-    } else if (label.includes('기상') || (label.includes('일어나') && label.includes('시간'))) {
+    } else if (label.includes('기상') || (label.includes('일어나') && label.includes('시'))) {
       data.wakeTime = value;
     } else if (label.includes('수면') && label.includes('질')) {
       data.sleepQuality = value;
@@ -1032,6 +1042,8 @@ function formatSleep(data) {
   // 수면 시간 (취침~기상)
   if (data.bedTime && data.wakeTime) {
     parts.push(data.bedTime + '~' + data.wakeTime);
+  } else if (data.sleepTimeRaw) {
+    parts.push(data.sleepTimeRaw);
   } else if (data.sleepHours) {
     parts.push(data.sleepHours + '시간');
   }
