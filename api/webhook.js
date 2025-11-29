@@ -114,7 +114,9 @@ function parseTallyData(tallyData) {
       data.name = value;
     } else if (label.includes('성별') || label.includes('남/녀') || label.includes('남녀')) {
       data.gender = value;
-    } else if (label.includes('나이') || label.includes('연령') || label.includes('만 ') || label.includes('출생')) {
+    } else if ((label.includes('나이') || label.includes('연령') || label.includes('만 ') || label.includes('출생'))
+               && !label.includes('뼈') && !label.includes('골')) {
+      // 뼈나이/골연령은 제외
       data.age = value;
     } else if (label.includes('직업') || label.includes('직종') || label.includes('하시는 일')) {
       data.occupation = value;
@@ -340,8 +342,8 @@ function parseTallyData(tallyData) {
       data.bedwetting = value;
     }
     // 성장 관련 상세
-    else if (label.includes('성장판') || label.includes('골연령')) {
-      data.growthPlate = value;
+    else if (label.includes('성장판') || label.includes('골연령') || label.includes('뼈나이') || label.includes('뼈 나이')) {
+      data.boneAge = value;
     } else if (label.includes('성조숙') || label.includes('조숙증')) {
       data.precociousPuberty = value;
     } else if (label.includes('2차') && label.includes('성징')) {
@@ -602,7 +604,7 @@ ${data.medicalHistory || '없음'}
 - 아버지 키: ${data.fatherHeight || '미입력'}cm
 - 어머니 키: ${data.motherHeight || '미입력'}cm
 - 성장 진료 관심: ${data.growthInterest || '미입력'}
-- 성장판/골연령: ${data.growthPlate || '미입력'}
+- 뼈나이/골연령: ${data.boneAge || '미입력'}
 - 성조숙증 여부: ${data.precociousPuberty || '미입력'}
 - 2차 성징: ${data.secondarySexCharacteristics || '미입력'}
 - 집중력: ${data.concentration || '미입력'}
@@ -855,7 +857,7 @@ function formatTeenSymptoms(data) {
 
   // 성장/2차성징
   const growthParts = [];
-  if (data.growthPlate) growthParts.push('성장판: ' + data.growthPlate);
+  if (data.boneAge) growthParts.push('뼈나이: ' + data.boneAge);
   if (data.precociousPuberty && data.precociousPuberty !== '없음' && data.precociousPuberty !== '해당 없음') {
     growthParts.push('성조숙증 의심');
   }
