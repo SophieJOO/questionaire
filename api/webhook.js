@@ -1519,6 +1519,9 @@ async function sendToStaffSlack(patientData) {
     parentHeightInfo = `📏 부모키: 아버지 ${fh}cm / 어머니 ${mh}cm`;
   }
 
+  // 설문 원본 응답
+  const rawResponseText = formatRawResponses(patientData.rawResponses || []);
+
   const blocks = [
     {
       type: "section",
@@ -1558,6 +1561,17 @@ async function sendToStaffSlack(patientData) {
         text: `⏰ ${timestamp}`
       }
     ]
+  });
+
+  // 설문 원본 응답 추가
+  blocks.push({ type: "divider" });
+  blocks.push({
+    type: "section",
+    text: { type: "mrkdwn", text: "*📋 설문 원본 응답*" }
+  });
+  blocks.push({
+    type: "section",
+    text: { type: "mrkdwn", text: "```" + rawResponseText + "```" }
   });
 
   try {
