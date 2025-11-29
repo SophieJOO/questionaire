@@ -1497,6 +1497,14 @@ async function sendToStaffSlack(patientData) {
     symptomSummary = symptomSummary.substring(0, 40) + '...';
   }
 
+  // 부모 키 정보 (청소년용)
+  let parentHeightInfo = '';
+  if (patientData.fatherHeight || patientData.motherHeight) {
+    const fh = patientData.fatherHeight || '미입력';
+    const mh = patientData.motherHeight || '미입력';
+    parentHeightInfo = `📏 부모키: 아버지 ${fh}cm / 어머니 ${mh}cm`;
+  }
+
   const blocks = [
     {
       type: "section",
@@ -1513,17 +1521,30 @@ async function sendToStaffSlack(patientData) {
           text: `주호소: ${symptomSummary}`
         }
       ]
-    },
-    {
-      type: "context",
-      elements: [
-        {
-          type: "mrkdwn",
-          text: `⏰ ${timestamp}`
-        }
-      ]
     }
   ];
+
+  // 부모 키 정보가 있으면 추가
+  if (parentHeightInfo) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: parentHeightInfo
+      }
+    });
+  }
+
+  // 타임스탬프
+  blocks.push({
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text: `⏰ ${timestamp}`
+      }
+    ]
+  });
 
   try {
     const response = await fetch(webhookUrl, {
