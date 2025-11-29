@@ -32,8 +32,13 @@ export default async function handler(req, res) {
 
     const chartOutput = formatChart(patientData, analysis);
 
+    // 원장용 상세 분석 슬랙 전송
     await sendToSlack(patientData, analysis, chartOutput);
     console.log('Slack sent');
+
+    // 직원용 간단 알림 슬랙 전송
+    await sendToStaffSlack(patientData);
+    console.log('Staff slack sent');
 
     return res.status(200).json({
       success: true,
@@ -1468,4 +1473,73 @@ function getSurveyTypeLabel(surveyType) {
   if (name.includes('자보') || name.includes('자동차') || name.includes('보험')) return '자동차보험';
   if (name.includes('소아') || name.includes('아동') || name.includes('child')) return '소아';
   return surveyType;
+}
+
+// ========== 직원용 간단 알림 ==========
+
+async function sendToStaffSlack(patientData) {
+  const webhookUrl = process.env.SLACK_STAFF_WEBHOOK_URL;
+  if (!webhookUrl) {
+    console.log('SLACK_STAFF_WEBHOOK_URL 미설정 - 직원 알림 생략');
+    return;
+  }
+
+  const surveyTypeLabel = getSurveyTypeLabel(patientData.surveyType);
+  const timestamp = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+
+  // 청소년 성장 진료 표시
+  const isTeen = patientData.grade || patientData.fatherHeight || patientData.motherHeight;
+  const growthNote = (isTeen && patientData.growthInterest === '있다') ? ' 📏 성장진료' : '';
+
+  // 주호소 요약 (40자 제한)
+  let symptomSummary = patientData.mainSymptom1 || '미입력';
+  if (symptomSummary.length > 40) {
+    symptomSummary = symptomSummary.substring(0, 40) + '...';
+  }
+
+  const blocks = [
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `📋 *새 설문 접수* [${surveyTypeLabel}]${growthNote}\n*${patientData.name || '이름 미입력'}* (${patientData.gender || '-'}/${patientData.age || '-'}세)`
+      }
+    },
+    {
+      type: "context",
+      elements: [
+        {
+          type: "mrkdwn",
+          text: `주호소: ${symptomSummary}`
+        }
+      ]
+    },
+    {
+      type: "context",
+      elements: [
+        {
+          type: "mrkdwn",
+          text: `⏰ ${timestamp}`
+        }
+      ]
+    }
+  ];
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        blocks,
+        text: `새 설문 접수: ${patientData.name || '미입력'} [${surveyTypeLabel}]`
+      })
+    });
+
+    if (!response.ok) {
+      console.error('직원 Slack 전송 실패:', response.statusText);
+    }
+  } catch (error) {
+    console.error('직원 Slack 전송 오류:', error.message);
+    // 직원 알림 실패는 전체 프로세스를 중단하지 않음
+  }
 }
