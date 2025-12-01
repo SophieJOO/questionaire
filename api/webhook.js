@@ -3,6 +3,33 @@
  * Vercel Serverless Function
  */
 
+// 중복 방지를 위한 처리된 응답 ID 캐시 (메모리 기반)
+// 참고: Vercel 서버리스 함수는 콜드 스타트 시 초기화됨
+const processedResponses = new Map();
+const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24시간
+
+function isAlreadyProcessed(responseId) {
+  if (!responseId) return false;
+
+  const now = Date.now();
+
+  // 만료된 항목 정리
+  for (const [id, timestamp] of processedResponses) {
+    if (now - timestamp > CACHE_EXPIRY_MS) {
+      processedResponses.delete(id);
+    }
+  }
+
+  // 이미 처리된 응답인지 확인
+  if (processedResponses.has(responseId)) {
+    return true;
+  }
+
+  // 새 응답 등록
+  processedResponses.set(responseId, now);
+  return false;
+}
+
 export default async function handler(req, res) {
   // CORS 헤더
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,6 +51,18 @@ export default async function handler(req, res) {
     console.log('Tally webhook received');
 
     const tallyData = req.body;
+    const responseId = tallyData.data?.responseId;
+
+    // 중복 요청 체크 - 동일 responseId가 이미 처리되었으면 스킵
+    if (isAlreadyProcessed(responseId)) {
+      console.log(`Duplicate request skipped: ${responseId}`);
+      return res.status(200).json({
+        success: true,
+        message: '이미 처리된 응답입니다 (중복 스킵)',
+        responseId: responseId
+      });
+    }
+
     const patientData = parseTallyData(tallyData);
     console.log('Parsed patient:', patientData.name);
 
