@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vercel dev"
   },
+  "dependencies": {
+    "@vercel/kv": "^2.0.0"
+  },
   "keywords": ["한의학", "설문지", "AI", "체질분석", "tally", "vercel"],
   "author": "아현재한의원",
   "license": "MIT",

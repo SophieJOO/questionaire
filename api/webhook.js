@@ -3,31 +3,37 @@
  * Vercel Serverless Function
  */
 
-// 중복 방지를 위한 처리된 응답 ID 캐시 (메모리 기반)
-// 참고: Vercel 서버리스 함수는 콜드 스타트 시 초기화됨
-const processedResponses = new Map();
-const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24시간
+import { kv } from '@vercel/kv';
 
-function isAlreadyProcessed(responseId) {
+// 중복 방지: Vercel KV 기반 (영구 저장, 동시 요청 처리 가능)
+const DUPLICATE_CHECK_EXPIRY_SECONDS = 86400; // 24시간
+
+/**
+ * 중복 요청 체크 및 등록 (atomic operation)
+ * @param {string} responseId - Tally 응답 ID
+ * @returns {Promise<boolean>} - 이미 처리된 요청이면 true
+ */
+async function checkAndMarkProcessed(responseId) {
   if (!responseId) return false;
 
-  const now = Date.now();
+  try {
+    // SETNX: 키가 없을 때만 설정 (atomic - 동시 요청 방지)
+    const key = `tally:${responseId}`;
+    const result = await kv.setnx(key, Date.now());
 
-  // 만료된 항목 정리
-  for (const [id, timestamp] of processedResponses) {
-    if (now - timestamp > CACHE_EXPIRY_MS) {
-      processedResponses.delete(id);
+    if (result === 1) {
+      // 새로 등록됨 - 만료 시간 설정
+      await kv.expire(key, DUPLICATE_CHECK_EXPIRY_SECONDS);
+      return false; // 중복 아님, 처리 진행
+    } else {
+      // 이미 존재함 - 중복 요청
+      return true;
     }
+  } catch (error) {
+    // KV 오류 시 로그만 남기고 처리 진행 (알림 누락 방지)
+    console.error('KV duplicate check error:', error.message);
+    return false;
   }
-
-  // 이미 처리된 응답인지 확인
-  if (processedResponses.has(responseId)) {
-    return true;
-  }
-
-  // 새 응답 등록
-  processedResponses.set(responseId, now);
-  return false;
 }
 
 export default async function handler(req, res) {
@@ -53,8 +59,9 @@ export default async function handler(req, res) {
     const tallyData = req.body;
     const responseId = tallyData.data?.responseId;
 
-    // 중복 요청 체크 - 동일 responseId가 이미 처리되었으면 스킵
-    if (isAlreadyProcessed(responseId)) {
+    // 중복 요청 체크 (Vercel KV 사용) - 동일 responseId가 이미 처리되었으면 스킵
+    const isDuplicate = await checkAndMarkProcessed(responseId);
+    if (isDuplicate) {
       console.log(`Duplicate request skipped: ${responseId}`);
       return res.status(200).json({
         success: true,
