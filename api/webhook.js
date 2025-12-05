@@ -160,10 +160,13 @@ function parseTallyData(tallyData) {
       data.name = value;
     } else if (label.includes('성별') || label.includes('남/녀') || label.includes('남녀')) {
       data.gender = value;
-    } else if ((label.includes('나이') || label.includes('연령') || label.includes('만 ') || label.includes('출생'))
-               && !label.includes('뼈') && !label.includes('골')) {
-      // 뼈나이/골연령은 제외
+    } else if ((label.includes('나이') || label.includes('연령') || label.includes('만 '))
+               && !label.includes('뼈') && !label.includes('골') && !label.includes('몸무게') && !label.includes('체중')) {
+      // 뼈나이/골연령, 출생시 몸무게 제외
       data.age = value;
+    } else if (label.includes('출생') && label.includes('몸무게')) {
+      // 출생시 몸무게는 별도 필드로 저장
+      data.birthWeight = value;
     } else if (label.includes('직업') || label.includes('직종') || label.includes('하시는 일')) {
       data.occupation = value;
     } else if (label.includes('학년')) {
