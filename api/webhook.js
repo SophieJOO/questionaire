@@ -160,18 +160,21 @@ function parseTallyData(tallyData) {
       data.name = value;
     } else if (label.includes('성별') || label.includes('남/녀') || label.includes('남녀')) {
       data.gender = value;
-    } else if ((label.includes('나이') || label.includes('연령') || label.includes('만 '))
+    } else if ((label.includes('나이') || label.includes('연령'))
                && !label.includes('뼈') && !label.includes('골') && !label.includes('몸무게') && !label.includes('체중')) {
       // 뼈나이/골연령, 출생시 몸무게 제외
-      data.age = value;
+      // 나이 값에서 숫자만 추출 (예: "만2세" → "2", "35세" → "35")
+      const ageMatch = value.match(/(\d+)/);
+      data.age = ageMatch ? ageMatch[1] : value;
     } else if (label.includes('출생') && label.includes('몸무게')) {
       // 출생시 몸무게는 별도 필드로 저장
       data.birthWeight = value;
     } else if (label.includes('직업') || label.includes('직종') || label.includes('하시는 일')) {
       data.occupation = value;
-    } else if (label.includes('학년')) {
+    } else if (label.includes('학년') && /[초중고]\d|[1-6]학년|학생/.test(value)) {
+      // 실제 학년인 경우만 (초1, 중2, 고3, 1학년~6학년 등)
       data.grade = value;
-      data.occupation = value + ' 학생'; // 직업 필드에도 학생으로 표시
+      data.occupation = value + ' 학생';
     }
     // 청소년용: 부모 키 (성장 예측용)
     else if (label.includes('아버지') && label.includes('키')) {
