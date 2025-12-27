@@ -1212,22 +1212,40 @@ function extractMode(symptomText) {
 
 // ========== SLACK ==========
 
-function formatRawResponses(rawResponses) {
+/**
+ * 원본 응답을 Slack 블록 제한에 맞게 여러 청크로 분할
+ * @param {Array} rawResponses - 원본 응답 배열
+ * @returns {Array<string>} - 2800자 이하로 분할된 텍스트 배열
+ */
+function formatRawResponsesChunks(rawResponses) {
   if (!rawResponses || rawResponses.length === 0) {
-    return '응답 데이터 없음';
+    return ['응답 데이터 없음'];
   }
 
-  let text = '';
+  const chunks = [];
+  let currentChunk = '';
+  const MAX_CHUNK_SIZE = 2800;
+
   for (const item of rawResponses) {
     const line = `[${item.label}] ${item.value}\n`;
-    // Slack 블록 텍스트 제한 (약 2900자)
-    if (text.length + line.length > 2800) {
-      text += '... (이하 생략)';
-      break;
+
+    if (currentChunk.length + line.length > MAX_CHUNK_SIZE) {
+      // 현재 청크 저장하고 새 청크 시작
+      if (currentChunk) {
+        chunks.push(currentChunk.trim());
+      }
+      currentChunk = line;
+    } else {
+      currentChunk += line;
     }
-    text += line;
   }
-  return text.trim();
+
+  // 마지막 청크 저장
+  if (currentChunk) {
+    chunks.push(currentChunk.trim());
+  }
+
+  return chunks.length > 0 ? chunks : ['응답 데이터 없음'];
 }
 
 async function sendToSlack(patientData, analysis, chartOutput) {
@@ -1335,8 +1353,8 @@ async function sendToSlack(patientData, analysis, chartOutput) {
     growthText = growthText.trim();
   }
 
-  // 원본 응답 텍스트 생성 (최대 2900자로 제한 - Slack 블록 제한)
-  const rawResponseText = formatRawResponses(patientData.rawResponses || []);
+  // 원본 응답을 여러 청크로 분할 (Slack 블록 제한 대응)
+  const rawResponseChunks = formatRawResponsesChunks(patientData.rawResponses || []);
 
   const blocks = [
     {
@@ -1488,12 +1506,19 @@ async function sendToSlack(patientData, analysis, chartOutput) {
     {
       type: "section",
       text: { type: "mrkdwn", text: "*📋 설문 원본 응답*" }
-    },
-    {
-      type: "section",
-      text: { type: "mrkdwn", text: "```" + rawResponseText + "```" }
     }
   ];
+
+  // 원본 응답 청크들을 각각 블록으로 추가 (전체 내용 표시)
+  for (let i = 0; i < rawResponseChunks.length; i++) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: "```" + rawResponseChunks[i] + "```"
+      }
+    });
+  }
 
   // 청소년 성장 분석 섹션 추가 (해당시)
   if (isTeen && growthText) {
@@ -1571,8 +1596,8 @@ async function sendToStaffSlack(patientData) {
     parentHeightInfo = `📏 부모키: 아버지 ${fh}cm / 어머니 ${mh}cm`;
   }
 
-  // 설문 원본 응답
-  const rawResponseText = formatRawResponses(patientData.rawResponses || []);
+  // 설문 원본 응답 (여러 청크로 분할)
+  const rawResponseChunks = formatRawResponsesChunks(patientData.rawResponses || []);
 
   const blocks = [
     {
@@ -1615,16 +1640,18 @@ async function sendToStaffSlack(patientData) {
     ]
   });
 
-  // 설문 원본 응답 추가
+  // 설문 원본 응답 추가 (여러 블록으로 분할하여 전체 표시)
   blocks.push({ type: "divider" });
   blocks.push({
     type: "section",
     text: { type: "mrkdwn", text: "*📋 설문 원본 응답*" }
   });
-  blocks.push({
-    type: "section",
-    text: { type: "mrkdwn", text: "```" + rawResponseText + "```" }
-  });
+  for (const chunk of rawResponseChunks) {
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: "```" + chunk + "```" }
+    });
+  }
 
   try {
     const response = await fetch(webhookUrl, {
