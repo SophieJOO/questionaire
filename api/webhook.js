@@ -183,8 +183,13 @@ function parseTallyData(tallyData) {
       data.motherHeight = value;
     }
     // 청소년용: 본인 키/체중
-    else if ((label.includes('키') || label.includes('신장')) && !label.includes('트림') && !label.includes('아버지') && !label.includes('어머니')) {
+    else if ((label.includes('키') || label.includes('신장'))
+             && !label.includes('트림') && !label.includes('아버지') && !label.includes('어머니')
+             && !label.includes('희망') && !label.includes('최종') && !label.includes('목표')) {
       data.height = value;
+    } else if (label.includes('희망') && label.includes('키')) {
+      // 최종희망키는 별도 필드로 저장
+      data.desiredHeight = value;
     } else if (label.includes('체중') || label.includes('몸무게')) {
       data.weight = value;
     }
