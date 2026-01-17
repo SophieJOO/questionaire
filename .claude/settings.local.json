@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(vercel --version:*)",
+      "Bash(npm install:*)",
+      "Bash(vercel:*)",
+      "Bash(VERCEL_TOKEN=VsETPofgF1ToGxLSVwonsGPe vercel --prod --yes)",
+      "Bash(curl:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}

@@ -171,7 +171,7 @@ function parseTallyData(tallyData) {
     } else if (label.includes('성별') || label.includes('남/녀') || label.includes('남녀')) {
       data.gender = value;
     } else if ((label.includes('나이') || label.includes('연령'))
-      && !label.includes('뼈') && !label.includes('골') && !label.includes('몸무게') && !label.includes('체중')) {
+               && !label.includes('뼈') && !label.includes('골') && !label.includes('몸무게') && !label.includes('체중')) {
       // 뼈나이/골연령, 출생시 몸무게 제외
       // 나이 값에서 숫자만 추출 (예: "만2세" → "2", "35세" → "35")
       const ageMatch = value.match(/(\d+)/);
@@ -198,8 +198,8 @@ function parseTallyData(tallyData) {
     }
     // 청소년용: 본인 키/체중 (희망키 등 제외)
     else if ((label.includes('키') || label.includes('신장'))
-      && !label.includes('트림') && !label.includes('아버지') && !label.includes('어머니')
-      && !label.includes('희망') && !label.includes('최종') && !label.includes('목표') && !label.includes('원하는')) {
+             && !label.includes('트림') && !label.includes('아버지') && !label.includes('어머니')
+             && !label.includes('희망') && !label.includes('최종') && !label.includes('목표') && !label.includes('원하는')) {
       data.height = value;
     } else if (label.includes('체중') || label.includes('몸무게')) {
       data.weight = value;
@@ -1249,8 +1249,7 @@ function formatRawResponsesChunks(rawResponses) {
   const MAX_CHUNK_SIZE = 2800;
 
   for (const item of rawResponses) {
-    const line = `[${item.label}] ${item.value}
-`;
+    const line = `[${item.label}] ${item.value}\n`;
 
     if (currentChunk.length + line.length > MAX_CHUNK_SIZE) {
       // 현재 청크 저장하고 새 청크 시작
