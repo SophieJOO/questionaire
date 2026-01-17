@@ -1574,7 +1574,7 @@ async function sendToSlack(patientData, analysis, chartOutput) {
 }
 
 /**
- * 차트를 텍스트 파일로 Slack에 업로드
+ * 차트를 텍스트 파일로 Slack에 업로드 (새 API 사용)
  */
 async function uploadChartFile(patientData, chartOutput) {
   const botToken = process.env.SLACK_BOT_TOKEN;
@@ -1589,26 +1589,58 @@ async function uploadChartFile(patientData, chartOutput) {
   const filename = `차트_${patientData.name || '환자'}_${timestamp}.txt`;
 
   try {
-    // Slack files.upload API 사용
-    const formData = new URLSearchParams();
-    formData.append('channels', channelId);
-    formData.append('content', chartOutput);
-    formData.append('filename', filename);
-    formData.append('title', `📄 차트 - ${patientData.name || '환자'}`);
-    formData.append('initial_comment', '📋 차트 파일입니다. 다운로드하거나 클릭해서 복사하세요.');
-
-    const response = await fetch('https://slack.com/api/files.upload', {
+    // 1단계: 업로드 URL 받기
+    const getUrlResponse = await fetch('https://slack.com/api/files.getUploadURLExternal', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${botToken}`,
         'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: formData.toString()
+      body: new URLSearchParams({
+        filename: filename,
+        length: Buffer.byteLength(chartOutput, 'utf8').toString()
+      }).toString()
     });
 
-    const result = await response.json();
-    if (!result.ok) {
-      console.error('차트 파일 업로드 실패:', result.error);
+    const urlResult = await getUrlResponse.json();
+
+    if (!urlResult.ok) {
+      console.error('차트 파일 URL 받기 실패:', urlResult.error);
+      return;
+    }
+
+    // 2단계: 파일 업로드
+    const uploadResponse = await fetch(urlResult.upload_url, {
+      method: 'POST',
+      body: chartOutput
+    });
+
+    if (!uploadResponse.ok) {
+      console.error('차트 파일 업로드 실패:', uploadResponse.statusText);
+      return;
+    }
+
+    // 3단계: 업로드 완료 처리
+    const completeResponse = await fetch('https://slack.com/api/files.completeUploadExternal', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${botToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        files: [{
+          id: urlResult.file_id,
+          title: `📄 차트 - ${patientData.name || '환자'}`
+        }],
+        channel_id: channelId,
+        initial_comment: '📋 차트 파일입니다. 다운로드하거나 클릭해서 복사하세요.'
+      })
+    });
+
+    const completeResult = await completeResponse.json();
+
+    if (!completeResult.ok) {
+      console.error('차트 파일 완료 처리 실패:', completeResult.error);
     } else {
       console.log('차트 파일 업로드 완료:', filename);
     }
