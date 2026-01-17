@@ -9,30 +9,37 @@ import { kv } from '@vercel/kv';
 const DUPLICATE_CHECK_EXPIRY_SECONDS = 86400; // 24시간
 
 /**
- * 중복 요청 체크 및 등록 (atomic operation)
+ * 이미 처리된 요청인지 확인 (체크만, 등록 안함)
  * @param {string} responseId - Tally 응답 ID
  * @returns {Promise<boolean>} - 이미 처리된 요청이면 true
  */
-async function checkAndMarkProcessed(responseId) {
+async function isAlreadyProcessed(responseId) {
   if (!responseId) return false;
 
   try {
-    // SETNX: 키가 없을 때만 설정 (atomic - 동시 요청 방지)
     const key = `tally:${responseId}`;
-    const result = await kv.setnx(key, Date.now());
-
-    if (result === 1) {
-      // 새로 등록됨 - 만료 시간 설정
-      await kv.expire(key, DUPLICATE_CHECK_EXPIRY_SECONDS);
-      return false; // 중복 아님, 처리 진행
-    } else {
-      // 이미 존재함 - 중복 요청
-      return true;
-    }
+    const exists = await kv.exists(key);
+    return exists === 1;
   } catch (error) {
-    // KV 오류 시 로그만 남기고 처리 진행 (알림 누락 방지)
-    console.error('KV duplicate check error:', error.message);
-    return false;
+    console.error('KV check error:', error.message);
+    return false; // 오류 시 처리 진행
+  }
+}
+
+/**
+ * 처리 완료 후 등록 (성공 시에만 호출)
+ * @param {string} responseId - Tally 응답 ID
+ */
+async function markAsProcessed(responseId) {
+  if (!responseId) return;
+
+  try {
+    const key = `tally:${responseId}`;
+    await kv.set(key, Date.now(), { ex: DUPLICATE_CHECK_EXPIRY_SECONDS });
+    console.log(`Marked as processed: ${responseId}`);
+  } catch (error) {
+    console.error('KV mark error:', error.message);
+    // 등록 실패해도 이미 처리 완료됨
   }
 }
 
@@ -59,8 +66,8 @@ export default async function handler(req, res) {
     const tallyData = req.body;
     const responseId = tallyData.data?.responseId;
 
-    // 중복 요청 체크 (Vercel KV 사용) - 동일 responseId가 이미 처리되었으면 스킵
-    const isDuplicate = await checkAndMarkProcessed(responseId);
+    // 중복 요청 체크 (체크만, 등록은 성공 후)
+    const isDuplicate = await isAlreadyProcessed(responseId);
     if (isDuplicate) {
       console.log(`Duplicate request skipped: ${responseId}`);
       return res.status(200).json({
@@ -85,6 +92,9 @@ export default async function handler(req, res) {
     // 직원용 간단 알림 슬랙 전송
     await sendToStaffSlack(patientData);
     console.log('Staff slack sent');
+
+    // 모든 처리 성공 후에만 "처리됨" 등록 (실패 시 재시도 가능)
+    await markAsProcessed(responseId);
 
     return res.status(200).json({
       success: true,
